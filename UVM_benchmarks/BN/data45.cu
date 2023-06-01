@@ -1,5 +1,5 @@
 // The data are synthesized.
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 #ifndef _DATA_H_
 #define _DATA_H_
 const int NODE_N=45;

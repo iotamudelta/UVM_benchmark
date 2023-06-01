@@ -5,9 +5,9 @@
 #include <time.h>
 //#include <cutil.h>
 // includes CUDA
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 // includes, kernels
-#include "ordergraph_kernel.cu"
+#include "ordergraph_kernel.hip"
 ;
 
 const int HIGHEST = 3;
@@ -65,7 +65,7 @@ int main() {
               prior[i][j]=0.5;
       }
   */
-  cudaMallocManaged(&U_data, DATA_N * NODE_N * sizeof(int));
+  hipMallocManaged(&U_data, DATA_N * NODE_N * sizeof(int));
   memcpy(U_data, &data, DATA_N * NODE_N);
 
   int i, j, c = 0, tmp, a, b;
@@ -73,7 +73,7 @@ int main() {
   fpout = fopen(name, "w");
 
   clock_t start, finish, total = 0, pre1, pre2;
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 
   printf("NODE_N=%d\nInitialization...\n", NODE_N);
   pre1 = clock();
@@ -161,15 +161,15 @@ int main() {
 
   } // endwhile
 
-  // cudaFreeHost(localscore);
-  cudaFree(U_data);
-  cudaFree(U_localscore);
-  cudaFree(U_parent);
+  // hipHostFree(localscore);
+  hipFree(U_data);
+  hipFree(U_localscore);
+  hipFree(U_parent);
 
-  cudaFree(U_scores);
-  // cudaFreeHost(parents);
-  // cudaFree(D_Score);
-  cudaFree(U_resP);
+  hipFree(U_scores);
+  // hipHostFree(parents);
+  // hipFree(D_Score);
+  hipFree(U_resP);
 
   /*
           for(j=0;j<HIGHEST;j++){
@@ -250,7 +250,7 @@ void initial() {
   sizepernode = tmp;
   tmp *= NODE_N;
 
-  cudaMallocManaged(&U_localscore, tmp * sizeof(float));
+  hipMallocManaged(&U_localscore, tmp * sizeof(float));
 
   for (i = 0; i < tmp; i++)
     U_localscore[i] = 0;
@@ -338,34 +338,34 @@ void genScore() {
 
   Pre_logGamma();
   // cudaPrintfInit();
-  // cudaMalloc((void **)&D_data, NODE_N * DATA_N * sizeof(int));
-  // cudaMallocManaged(&U_localscore, NODE_N * sizepernode * sizeof(float));
-  // cudaMallocManaged((void **)&U_LG, (DATA_N + 2) * sizeof(float));
-  // cudaMemset(U_localscore, 0.0, NODE_N * sizepernode * sizeof(float));
-  // cudaMemcpy(D_data, data, NODE_N * DATA_N * sizeof(int),
-  //  cudaMemcpyHostToDevice);
-  // cudaMemcpy(D_LG, LG, (DATA_N + 2) * sizeof(float), cudaMemcpyHostToDevice);
+  // hipMalloc((void **)&D_data, NODE_N * DATA_N * sizeof(int));
+  // hipMallocManaged(&U_localscore, NODE_N * sizepernode * sizeof(float));
+  // hipMallocManaged((void **)&U_LG, (DATA_N + 2) * sizeof(float));
+  // hipMemset(U_localscore, 0.0, NODE_N * sizepernode * sizeof(float));
+  // hipMemcpy(D_data, data, NODE_N * DATA_N * sizeof(int),
+  //  hipMemcpyHostToDevice);
+  // hipMemcpy(D_LG, LG, (DATA_N + 2) * sizeof(float), hipMemcpyHostToDevice);
   genScoreKernel<<<grid, threads>>>(sizepernode, U_localscore, U_data, U_LG);
-  cudaDeviceSynchronize();
-  // cudaDeviceSynchronize();
-  // cudaMemcpy(localscore, D_localscore, NODE_N * sizepernode * sizeof(float),
-  //  cudaMemcpyDeviceToHost);
+  hipDeviceSynchronize();
+  // hipDeviceSynchronize();
+  // hipMemcpy(localscore, D_localscore, NODE_N * sizepernode * sizeof(float),
+  //  hipMemcpyDeviceToHost);
 
   // cudaPrintfDisplay(stdout, true);
   // cudaPrintfEnd();
 
-  // cudaFreeHost(LG);
-  cudaFree(U_LG);
-  // cudaFree(U_data);
+  // hipHostFree(LG);
+  hipFree(U_LG);
+  // hipFree(U_data);
 
-  cudaMallocManaged(&U_scores,
+  hipMallocManaged(&U_scores,
                     (sizepernode / (256 * taskperthr) + 1) * sizeof(float));
-  // cudaMallocHost((void **)&parents,
+  // hipHostMalloc((void **)&parents,
   //                (sizepernode / (256 * taskperthr) + 1) * 4 * sizeof(int));
-  // cudaMalloc((void **)&U_Score,
+  // hipMalloc((void **)&U_Score,
   //            (sizepernode / (256 * taskperthr) + 1) * sizeof(float));
-  cudaMallocManaged(&U_parent, NODE_N * sizeof(bool));
-  cudaMallocManaged(&U_resP,
+  hipMallocManaged(&U_parent, NODE_N * sizeof(bool));
+  hipMallocManaged(&U_resP,
                     (sizepernode / (256 * taskperthr) + 1) * 4 * sizeof(int));
 }
 
@@ -385,8 +385,8 @@ int convert(int *parent, int parN) {
 
 void Pre_logGamma() {
 
-  // cudaMallocHost((void **)&LG, (DATA_N + 2) * sizeof(float));
-  cudaMallocManaged(&U_LG, (DATA_N + 2) * sizeof(float));
+  // hipHostMalloc((void **)&LG, (DATA_N + 2) * sizeof(float));
+  hipMallocManaged(&U_LG, (DATA_N + 2) * sizeof(float));
   U_LG[1] = log(1.0);
   float i;
   for (i = 2; i <= DATA_N + 1; i++) {
@@ -487,10 +487,10 @@ float findBestGraph() {
       taskperthr = 1;
       blocknum = total / (256 * taskperthr) + 1;
 
-      // cudaMemset(D_resP, 0, blocknum * 4 * sizeof(int));
-      cudaMemset(U_scores, -999999.0, blocknum * sizeof(float));
-      // cudaMemcpy(D_parent, orders[node], NODE_N * sizeof(bool),
-      //            cudaMemcpyHostToDevice);
+      // hipMemset(D_resP, 0, blocknum * 4 * sizeof(int));
+      hipMemset(U_scores, -999999.0, blocknum * sizeof(float));
+      // hipMemcpy(D_parent, orders[node], NODE_N * sizeof(bool),
+      //            hipMemcpyHostToDevice);
       for (int j = 0; j < NODE_N; j++) {
         U_parent[j] = orders[node][j];
       }
@@ -498,11 +498,11 @@ float findBestGraph() {
       computeKernel<<<blocknum, 256, 256 * sizeof(float)>>>(
           taskperthr, sizepernode, U_localscore, U_parent, node, total,
           U_scores, U_resP);
-      cudaDeviceSynchronize();
-      // cudaMemcpy(parents, D_resP, blocknum * 4 * sizeof(int),
-      //  cudaMemcpyDeviceToHost);
-      // cudaMemcpy(scores, D_Score, blocknum * sizeof(float),
-      //            cudaMemcpyDeviceToHost);
+      hipDeviceSynchronize();
+      // hipMemcpy(parents, D_resP, blocknum * 4 * sizeof(int),
+      //  hipMemcpyDeviceToHost);
+      // hipMemcpy(scores, D_Score, blocknum * sizeof(float),
+      //            hipMemcpyDeviceToHost);
 
       for (i = 0; i < blocknum; i++) {
 
