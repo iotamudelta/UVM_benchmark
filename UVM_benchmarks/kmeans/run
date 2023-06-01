@@ -15,6 +15,6 @@
 # ./kmeans_cuda 2 ../../data/kmeans/50000_points.txt 50000
 # ./kmeans_cuda 2 ../../data/kmeans/100000_points.txt 100000
 # ./kmeans_cuda 2 ../../data/kmeans/500000_points.txt 500000
-./kmeans_cuda 2 ../../data/kmeans/1000000_points.txt 1000000
+./kmeans_hip 2 ../../data/kmeans/1000000_points.txt 1000000
 
 rm -f  *.txt

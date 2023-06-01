@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
@@ -15,9 +16,9 @@
 double gpu_time_used;
 #define I(row, col, ncols) (row * ncols + col)
 
-#define CUDA_CALL(x) {if((x) != cudaSuccess){ \
+#define CUDA_CALL(x) {if((x) != hipSuccess){ \
   printf("CUDA error at %s:%d\n",__FILE__,__LINE__); \
-  printf("  %s\n", cudaGetErrorString(cudaGetLastError())); \
+  printf("  %s\n", hipGetErrorString(hipGetLastError())); \
   exit(EXIT_FAILURE);}} 
 
 __global__ void get_dst(float *dst, float *x, float *y, 
@@ -113,16 +114,16 @@ int main(int argc,char* argv[]){
   // group = (int*) malloc(n*sizeof(int));
 
   /* allocate gpu memory */
-  CUDA_CALL(cudaMallocManaged(&group_d,n*sizeof(int)));
-  CUDA_CALL(cudaMallocManaged(&nx_d, k*sizeof(int)));
-  CUDA_CALL(cudaMallocManaged(&ny_d, k*sizeof(int)));
-  CUDA_CALL(cudaMallocManaged(&x_d, n*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&y_d, n*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&mu_x_d, k*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&mu_y_d, k*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&sum_x_d, k*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&sum_y_d, k*sizeof(float)));
-  CUDA_CALL(cudaMallocManaged(&dst_d, n*k*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&group_d,n*sizeof(int)));
+  CUDA_CALL(hipMallocManaged(&nx_d, k*sizeof(int)));
+  CUDA_CALL(hipMallocManaged(&ny_d, k*sizeof(int)));
+  CUDA_CALL(hipMallocManaged(&x_d, n*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&y_d, n*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&mu_x_d, k*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&mu_y_d, k*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&sum_x_d, k*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&sum_y_d, k*sizeof(float)));
+  CUDA_CALL(hipMallocManaged(&dst_d, n*k*sizeof(float)));
 
   memcpy(x_d, x, n*sizeof(float));
   memcpy(y_d, x, n*sizeof(float));
@@ -130,10 +131,10 @@ int main(int argc,char* argv[]){
   memcpy(mu_y_d, mu_y, k*sizeof(float));
 
   /* write data to gpu */
-  // CUDA_CALL(cudaMemcpy(x_d, x, n*sizeof(float), cudaMemcpyHostToDevice));
-  // CUDA_CALL(cudaMemcpy(y_d, y, n*sizeof(float), cudaMemcpyHostToDevice));
-  // CUDA_CALL(cudaMemcpy(mu_x_d, mu_x, k*sizeof(float), cudaMemcpyHostToDevice));
-  // CUDA_CALL(cudaMemcpy(mu_y_d, mu_y, k*sizeof(float), cudaMemcpyHostToDevice));
+  // CUDA_CALL(hipMemcpy(x_d, x, n*sizeof(float), hipMemcpyHostToDevice));
+  // CUDA_CALL(hipMemcpy(y_d, y, n*sizeof(float), hipMemcpyHostToDevice));
+  // CUDA_CALL(hipMemcpy(mu_x_d, mu_x, k*sizeof(float), hipMemcpyHostToDevice));
+  // CUDA_CALL(hipMemcpy(mu_y_d, mu_y, k*sizeof(float), hipMemcpyHostToDevice));
   /* perform kmeans */
 
 
@@ -149,9 +150,9 @@ int main(int argc,char* argv[]){
 gpu_time_used = duration.count();
 
   /* read back data from gpu */
-  // CUDA_CALL(cudaMemcpy(group, group_d, n*sizeof(int), cudaMemcpyDeviceToHost));
-  // CUDA_CALL(cudaMemcpy(mu_x, mu_x_d, k*sizeof(float), cudaMemcpyDeviceToHost));
-  // CUDA_CALL(cudaMemcpy(mu_y, mu_y_d, k*sizeof(float), cudaMemcpyDeviceToHost));
+  // CUDA_CALL(hipMemcpy(group, group_d, n*sizeof(int), hipMemcpyDeviceToHost));
+  // CUDA_CALL(hipMemcpy(mu_x, mu_x_d, k*sizeof(float), hipMemcpyDeviceToHost));
+  // CUDA_CALL(hipMemcpy(mu_y, mu_y_d, k*sizeof(float), hipMemcpyDeviceToHost));
 
   /* print results and clean up */  
   print_results(group_d, mu_x_d, mu_y_d, n, k,argv[3]);
@@ -163,16 +164,16 @@ gpu_time_used = duration.count();
   free(mu_y);
   // free(group);
 
-  CUDA_CALL(cudaFree(x_d));
-  CUDA_CALL(cudaFree(y_d));
-  CUDA_CALL(cudaFree(mu_x_d));
-  CUDA_CALL(cudaFree(mu_y_d));
-  CUDA_CALL(cudaFree(group_d));
-  CUDA_CALL(cudaFree(nx_d));
-  CUDA_CALL(cudaFree(ny_d));
-  CUDA_CALL(cudaFree(sum_x_d));
-  CUDA_CALL(cudaFree(sum_y_d));
-  CUDA_CALL(cudaFree(dst_d));
+  CUDA_CALL(hipFree(x_d));
+  CUDA_CALL(hipFree(y_d));
+  CUDA_CALL(hipFree(mu_x_d));
+  CUDA_CALL(hipFree(mu_y_d));
+  CUDA_CALL(hipFree(group_d));
+  CUDA_CALL(hipFree(nx_d));
+  CUDA_CALL(hipFree(ny_d));
+  CUDA_CALL(hipFree(sum_x_d));
+  CUDA_CALL(hipFree(sum_y_d));
+  CUDA_CALL(hipFree(dst_d));
 
   return 0;
 }

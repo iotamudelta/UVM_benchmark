@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <algorithm>
 #include <cfloat>
 #include <chrono>
@@ -14,25 +15,25 @@
 double std_time_used;
 struct Data {
   Data(int size) : size(size), bytes(size * sizeof(float)) {
-    cudaMallocManaged(&x, bytes);
-    cudaMallocManaged(&y, bytes);
-    cudaMemset(x, 0, bytes);
-    cudaMemset(y, 0, bytes);
+    hipMallocManaged(&x, bytes);
+    hipMallocManaged(&y, bytes);
+    hipMemset(x, 0, bytes);
+    hipMemset(y, 0, bytes);
   }
 
   Data(int size, std::vector<float>& h_x, std::vector<float>& h_y)
   : size(size), bytes(size * sizeof(float)) {
-    cudaMallocManaged(&x, bytes);
-    cudaMallocManaged(&y, bytes);
-    // cudaMemcpy(x, h_x.data(), bytes, cudaMemcpyHostToDevice);
-    // cudaMemcpy(y, h_y.data(), bytes, cudaMemcpyHostToDevice);
+    hipMallocManaged(&x, bytes);
+    hipMallocManaged(&y, bytes);
+    // hipMemcpy(x, h_x.data(), bytes, hipMemcpyHostToDevice);
+    // hipMemcpy(y, h_y.data(), bytes, hipMemcpyHostToDevice);
     memcpy(x, h_x.data(), bytes);
     memcpy(y, h_y.data(), bytes);
   }
 
   ~Data() {
-    cudaFree(x);
-    cudaFree(y);
+    hipFree(x);
+    hipFree(y);
   }
 
   float* x{nullptr};
@@ -199,8 +200,8 @@ int main(int argc, const char* argv[]) {
 
   Data d_sums(k * blocks);
   int* d_counts;
-  cudaMalloc(&d_counts, k * blocks * sizeof(int));
-  cudaMemset(d_counts, 0, k * blocks * sizeof(int));
+  hipMalloc(&d_counts, k * blocks * sizeof(int));
+  hipMemset(d_counts, 0, k * blocks * sizeof(int));
 
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -214,7 +215,7 @@ int main(int argc, const char* argv[]) {
                                                          d_sums.y,
                                                          k,
                                                          d_counts);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
 
     coarse_reduce<<<1, k * blocks, coarse_shared_memory>>>(d_means.x,
                                                            d_means.y,
@@ -223,7 +224,7 @@ int main(int argc, const char* argv[]) {
                                                            k,
                                                            d_counts);
 
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
   }
 
   const auto end = std::chrono::high_resolution_clock::now();
@@ -233,12 +234,12 @@ int main(int argc, const char* argv[]) {
 
 std_time_used = duration.count();
 
-  cudaFree(d_counts);
+  hipFree(d_counts);
 
   std::vector<float> mean_x(k, 0);
   std::vector<float> mean_y(k, 0);
-  // cudaMemcpy(mean_x.data(), d_means.x, d_means.bytes, cudaMemcpyDeviceToHost);
-  // cudaMemcpy(mean_y.data(), d_means.y, d_means.bytes, cudaMemcpyDeviceToHost);
+  // hipMemcpy(mean_x.data(), d_means.x, d_means.bytes, hipMemcpyDeviceToHost);
+  // hipMemcpy(mean_y.data(), d_means.y, d_means.bytes, hipMemcpyDeviceToHost);
   memcpy(mean_x.data(), d_means.x, d_means.bytes);
   memcpy(mean_y.data(), d_means.y, d_means.bytes);
 
