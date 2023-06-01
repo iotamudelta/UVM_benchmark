@@ -1,11 +1,11 @@
 #include <cstdio>
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_runtime_api.h>
 #include <string>
 #include <cstring>
 #include "graph.h"
 #include "bfsCPU.h"
-#include "bfsCUDA.cuh"
+#include "bfsHIP.h"
 
 
 void runCpu(int startVertex, Graph &G, std::vector<int> &distance,
@@ -20,11 +20,11 @@ void runCpu(int startVertex, Graph &G, std::vector<int> &distance,
 
 
 #define checkError(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+inline void gpuAssert(hipError_t code, const char *file, int line, bool abort=true)
 {
-   if (code != cudaSuccess) 
+   if (code != hipSuccess) 
    {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      fprintf(stderr,"GPUassert: %s %s %d\n", hipGetErrorString(code), file, line);
       if (abort) exit(code);
    }
 
@@ -43,40 +43,40 @@ int *incrDegrees;
 
 
 void initCuda(Graph &G) {
-    checkError(cudaMallocManaged(&u_adjacencyList, G.numEdges * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_edgesOffset, G.numVertices * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_edgesSize, G.numVertices * sizeof(int)) );
-    checkError(cudaMallocManaged(&u_distance, G.numVertices * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_parent, G.numVertices * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_currentQueue, G.numVertices * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_nextQueue, G.numVertices * sizeof(int) ));
-    checkError(cudaMallocManaged(&u_degrees, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_adjacencyList, G.numEdges * sizeof(int) ));
+    checkError(hipMallocManaged(&u_edgesOffset, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_edgesSize, G.numVertices * sizeof(int)) );
+    checkError(hipMallocManaged(&u_distance, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_parent, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_currentQueue, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_nextQueue, G.numVertices * sizeof(int) ));
+    checkError(hipMallocManaged(&u_degrees, G.numVertices * sizeof(int) ));
 
 
 
-    checkError(cudaMallocHost((void **) &incrDegrees, sizeof(int) * G.numVertices));
+    checkError(hipHostMalloc((void **) &incrDegrees, sizeof(int) * G.numVertices));
 
 
     memcpy(u_adjacencyList, G.adjacencyList.data(), G.numEdges * sizeof(int));
     memcpy(u_edgesOffset, G.edgesOffset.data(), G.numVertices * sizeof(int));
     memcpy(u_edgesSize, G.edgesSize.data(), G.numVertices * sizeof(int));
-    // checkError(cudaMemcpy(d_adjacencyList, G.adjacencyList.data(), G.numEdges * sizeof(int), cudaMemcpyHostToDevice));
-    // checkError(cudaMemcpy(d_edgesOffset, G.edgesOffset.data(), G.numVertices * sizeof(int), cudaMemcpyHostToDevice));
-    // checkError(cudaMemcpy(d_edgesSize, G.edgesSize.data(), G.numVertices * sizeof(int), cudaMemcpyHostToDevice ));
+    // checkError(hipMemcpy(d_adjacencyList, G.adjacencyList.data(), G.numEdges * sizeof(int), hipMemcpyHostToDevice));
+    // checkError(hipMemcpy(d_edgesOffset, G.edgesOffset.data(), G.numVertices * sizeof(int), hipMemcpyHostToDevice));
+    // checkError(hipMemcpy(d_edgesSize, G.edgesSize.data(), G.numVertices * sizeof(int), hipMemcpyHostToDevice ));
 
 }
 
 void finalizeCuda() {
 
-    checkError(cudaFree(u_adjacencyList));
-    checkError(cudaFree(u_edgesOffset));
-    checkError(cudaFree(u_edgesSize));
-    checkError(cudaFree(u_distance));
-    checkError(cudaFree(u_parent));
-    checkError(cudaFree(u_currentQueue));
-    checkError(cudaFree(u_nextQueue));
-    checkError(cudaFree(u_degrees));
-    checkError(cudaFreeHost(incrDegrees));
+    checkError(hipFree(u_adjacencyList));
+    checkError(hipFree(u_edgesOffset));
+    checkError(hipFree(u_edgesSize));
+    checkError(hipFree(u_distance));
+    checkError(hipFree(u_parent));
+    checkError(hipFree(u_currentQueue));
+    checkError(hipFree(u_nextQueue));
+    checkError(hipFree(u_degrees));
+    checkError(hipHostFree(incrDegrees));
 }
 
 
@@ -101,20 +101,20 @@ void initializeCudaBfs(int startVertex, std::vector<int> &distance, std::vector<
     distance[startVertex] = 0;
     parent[startVertex] = 0;
 
-    // checkError(cudaMemcpy(d_distance, distance.data(), G.numVertices * sizeof(int), cudaMemcpyHostToDevice));
-    // checkError(cudaMemcpy(d_parent, parent.data(), G.numVertices * sizeof(int), cudaMemcpyHostToDevice));
+    // checkError(hipMemcpy(d_distance, distance.data(), G.numVertices * sizeof(int), hipMemcpyHostToDevice));
+    // checkError(hipMemcpy(d_parent, parent.data(), G.numVertices * sizeof(int), hipMemcpyHostToDevice));
     memcpy(u_distance, distance.data(), G.numVertices * sizeof(int));
     memcpy(u_parent, parent.data(), G.numVertices * sizeof(int));
 
     int firstElementQueue = startVertex;
-    // cudaMemcpy(d_currentQueue, &firstElementQueue, sizeof(int), cudaMemcpyHostToDevice);
+    // hipMemcpy(d_currentQueue, &firstElementQueue, sizeof(int), hipMemcpyHostToDevice);
     *u_currentQueue = firstElementQueue;
 }
 
 void finalizeCudaBfs(std::vector<int> &distance, std::vector<int> &parent, Graph &G) {
     //copy memory from device
-    // checkError(cudaMemcpy(distance.data(), d_distance, G.numVertices * sizeof(int), cudaMemcpyDeviceToHost));
-    // checkError(cudaMemcpy(parent.data(), d_parent, G.numVertices * sizeof(int), cudaMemcpyDeviceToHost));
+    // checkError(hipMemcpy(distance.data(), d_distance, G.numVertices * sizeof(int), hipMemcpyDeviceToHost));
+    // checkError(hipMemcpy(parent.data(), d_parent, G.numVertices * sizeof(int), hipMemcpyDeviceToHost));
 }
 
 void runCudaSimpleBfs(int startVertex, Graph &G, std::vector<int> &distance,
@@ -122,7 +122,7 @@ void runCudaSimpleBfs(int startVertex, Graph &G, std::vector<int> &distance,
     initializeCudaBfs(startVertex, distance, parent, G);
 
     int *changed;
-    checkError(cudaMallocHost((void **) &changed, sizeof(int)));
+    checkError(hipHostMalloc((void **) &changed, sizeof(int)));
 
     //launch kernel
     printf("Starting simple parallel bfs.\n");
@@ -134,11 +134,11 @@ void runCudaSimpleBfs(int startVertex, Graph &G, std::vector<int> &distance,
         *changed = 0;
         // void *args[] = {&G.numVertices, &level, &d_adjacencyList, &d_edgesOffset, &d_edgesSize, &d_distance, &d_parent,
         //                 &changed};
-        // checkError(cuLaunchKernel(cuSimpleBfs, G.numVertices / 1024 + 1, 1, 1,
+        // checkError(hipModuleLaunchKernel(cuSimpleBfs, G.numVertices / 1024 + 1, 1, 1,
         //                           1024, 1, 1, 0, 0, args, 0));
 
         simpleBfs<<<G.numVertices / 1024 + 1, 1024>>>(G.numVertices, level, u_adjacencyList, u_edgesOffset, u_edgesSize, u_distance, u_parent, changed);                 
-        cudaDeviceSynchronize();
+        hipDeviceSynchronize();
         level++;
     }
 
@@ -155,7 +155,7 @@ void runCudaQueueBfs(int startVertex, Graph &G, std::vector<int> &distance,
     initializeCudaBfs(startVertex, distance, parent, G);
 
     int *nextQueueSize;
-    checkError(cudaMallocHost((void **)&nextQueueSize, sizeof(int)));
+    checkError(hipHostMalloc((void **)&nextQueueSize, sizeof(int)));
     //launch kernel
     printf("Starting queue parallel bfs.\n");
     auto start = std::chrono::steady_clock::now();
@@ -167,7 +167,7 @@ void runCudaQueueBfs(int startVertex, Graph &G, std::vector<int> &distance,
 
         queueBfs<<<queueSize / 1024 + 1, 1024>>>(level, u_adjacencyList, u_edgesOffset, u_edgesSize, u_distance, u_parent, queueSize,
                                                 nextQueueSize, u_currentQueue, u_nextQueue);
-        cudaDeviceSynchronize();
+        hipDeviceSynchronize();
         level++;
         queueSize = *nextQueueSize;
         *nextQueueSize = 0;
@@ -185,7 +185,7 @@ void nextLayer(int level, int queueSize) {
 
     nextLayer<<<queueSize / 1024 + 1, 1024>>>(level, u_adjacencyList, u_edgesOffset, u_edgesSize, u_distance, u_parent, queueSize,
                                             u_currentQueue);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
 
 }
 
@@ -193,7 +193,7 @@ void countDegrees(int level, int queueSize) {
 
     countDegrees<<<queueSize / 1024 + 1, 1024>>>(u_adjacencyList, u_edgesOffset, u_edgesSize, u_parent, queueSize,
         u_currentQueue, u_degrees);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
 
 }
 
@@ -201,7 +201,7 @@ void scanDegrees(int queueSize) {
 //run kernel so every block in d_currentQueue has prefix sums calculated
 
     scanDegrees<<<queueSize / 1024 + 1, 1024>>>(queueSize, u_degrees, incrDegrees);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     //count prefix sums on CPU for ends of blocks exclusive
     //already written previous block sum
     incrDegrees[0] = 0;
@@ -214,7 +214,7 @@ void assignVerticesNextQueue(int queueSize, int nextQueueSize) {
 
     assignVerticesNextQueue<<<queueSize / 1024 + 1, 1024>>>(u_adjacencyList, u_edgesOffset, u_edgesSize, u_parent, queueSize, u_currentQueue,
         u_nextQueue, u_degrees, incrDegrees, nextQueueSize);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
 
 }
 

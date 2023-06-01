@@ -1,6 +1,6 @@
-#include <device_launch_parameters.h>
+#include "hip/hip_runtime.h"
 #include <cstdio>
-#include <bfsCUDA.cuh>
+#include <bfsHIP.h>
 
 // #ifndef _BFSCUDA_H_
 // #define _BFSCUDA_H_
