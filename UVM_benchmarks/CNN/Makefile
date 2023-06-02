@@ -1,7 +1,7 @@
 HIPCC  := /opt/rocm/bin/hipcc
 
 all:
-	$(CC) -lamdhip64 -lhipblas main.hip layer.hip -o CNN
+	$(HIPCC) -lamdhip64 -lhipblas main.hip layer.hip -o CNN
 
 run:
 	./CNN
