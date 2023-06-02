@@ -13,17 +13,17 @@ Layer::Layer(int M, int N, int O) {
   preact = NULL;
   bias = NULL;
   weight = NULL;
-  cudaStreamCreate(&stream);
-  cudaMallocManaged(&output, sizeof(float) * O);
-  cudaMallocManaged(&preact, sizeof(float) * O);
+  hipStreamCreate(&stream);
+  hipMallocManaged(&output, sizeof(float) * O);
+  hipMallocManaged(&preact, sizeof(float) * O);
 
-  cudaMallocManaged(&bias, sizeof(float) * N);
+  hipMallocManaged(&bias, sizeof(float) * N);
 
-  cudaMallocManaged(&weight, sizeof(float) * M * N);
+  hipMallocManaged(&weight, sizeof(float) * M * N);
 
-  cudaMallocManaged(&d_output, sizeof(float) * O);
-  cudaMallocManaged(&d_preact, sizeof(float) * O);
-  cudaMallocManaged(&d_weight, sizeof(float) * M * N);
+  hipMallocManaged(&d_output, sizeof(float) * O);
+  hipMallocManaged(&d_preact, sizeof(float) * O);
+  hipMallocManaged(&d_weight, sizeof(float) * M * N);
 
   for (int i = 0; i < N; ++i) {
     // h_bias[i] = 0.5f - float(rand()) / float(RAND_MAX);
@@ -36,43 +36,43 @@ Layer::Layer(int M, int N, int O) {
       /*h_weight[i][j] = 0.05f;*/
     }
   }
-  // cudaMemcpy(bias, h_bias, sizeof(float) * N, cudaMemcpyHostToDevice);
+  // hipMemcpy(bias, h_bias, sizeof(float) * N, hipMemcpyHostToDevice);
 
-  // cudaMemcpy(weight, h_weight, sizeof(float) * M * N,
-  // cudaMemcpyHostToDevice);
+  // hipMemcpy(weight, h_weight, sizeof(float) * M * N,
+  // hipMemcpyHostToDevice);
   // memcpy(weight, h_weight, sizeof(float) * M * N);
 }
 
 // Destructor
 Layer::~Layer() {
-  cudaStreamDestroy(stream);
-  cudaFree(output);
-  cudaFree(preact);
-  cudaFree(bias);
-  cudaFree(weight);
-  cudaFree(d_output);
-  cudaFree(d_preact);
-  cudaFree(d_weight);
+  hipStreamDestroy(stream);
+  hipFree(output);
+  hipFree(preact);
+  hipFree(bias);
+  hipFree(weight);
+  hipFree(d_output);
+  hipFree(d_preact);
+  hipFree(d_weight);
 }
 
 // Send data one row from dataset to the GPU
 void Layer::setOutput(float *data) {
-  // cudaMemcpy(output, data, sizeof(float) * O, cudaMemcpyHostToDevice);
+  // hipMemcpy(output, data, sizeof(float) * O, hipMemcpyHostToDevice);
   memcpy(output, data, sizeof(float) * O); //TODO May change to prefetch
-  cudaMemPrefetchAsync(output,sizeof(float) * O,  0, stream );
+  hipMemPrefetchAsync(output,sizeof(float) * O,  0, stream );
 
 }
 
 // Reset GPU memory between iterations
 void Layer::clear() {
-  cudaMemset(output, 0x00, sizeof(float) * O);
-  cudaMemset(preact, 0x00, sizeof(float) * O);
+  hipMemset(output, 0x00, sizeof(float) * O);
+  hipMemset(preact, 0x00, sizeof(float) * O);
 }
 
 void Layer::bp_clear() {
-  cudaMemset(d_output, 0x00, sizeof(float) * O);
-  cudaMemset(d_preact, 0x00, sizeof(float) * O);
-  cudaMemset(d_weight, 0x00, sizeof(float) * M * N);
+  hipMemset(d_output, 0x00, sizeof(float) * O);
+  hipMemset(d_preact, 0x00, sizeof(float) * O);
+  hipMemset(d_weight, 0x00, sizeof(float) * M * N);
 }
 
 __device__ float step_function(float v) { return 1 / (1 + exp(-v)); }

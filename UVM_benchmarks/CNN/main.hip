@@ -4,7 +4,7 @@
 #include "mnist.h"
 
 #include <cstdio>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <time.h>
 
 static mnist_data *train_set, *test_set;
@@ -33,8 +33,8 @@ static inline void loaddata() {
 int main(int argc, const char **argv) {
   srand(time(NULL));
 
-  CUresult err = cuInit(0);
-  if (err != CUDA_SUCCESS) {
+  hipError_t err = hipInit(0);
+  if (err != hipSuccess) {
     fprintf(stderr, "CUDA initialisation failed with error code - %d\n", err);
     return 1;
   }
@@ -82,7 +82,7 @@ static double forward_pass(double data[28][28]) {
                           (float(*)[6][6][6])l_f.weight);
   fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
   apply_step_function<<<64, 64>>>(l_f.preact, l_f.output, l_f.O);
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
   end = clock();
   return ((double)(end - start)) / CLOCKS_PER_SEC;
 }
@@ -121,7 +121,7 @@ static double back_pass() {
   apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
   apply_grad<<<64, 64>>>(l_s1.weight, l_s1.d_weight, l_s1.M * l_s1.N);
   apply_grad<<<64, 64>>>(l_c1.weight, l_c1.d_weight, l_c1.M * l_c1.N);
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 
   end = clock();
   return ((double)(end - start)) / CLOCKS_PER_SEC;
@@ -144,8 +144,8 @@ static void unfold_input(double input[28][28],
 }
 
 static void learn() {
-  static cublasHandle_t blas;
-  cublasCreate(&blas);
+  static hipblasHandle_t blas;
+  hipblasCreate(&blas);
 
   float err;
   int iter = 1;
@@ -168,7 +168,7 @@ static void learn() {
 
       // Euclid distance of train_set[i]
       makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-      cublasSnrm2(blas, 10, l_f.d_preact, 1, &tmp_err);
+      hipblasSnrm2(blas, 10, l_f.d_preact, 1, &tmp_err);
       err += tmp_err;
 
       time_taken += back_pass();
@@ -194,7 +194,7 @@ static unsigned int classify(double data[28][28]) {
 
   unsigned int max = 0;
 
-  // cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+  // hipMemcpy(res, l_f.output, sizeof(float) * 10, hipMemcpyDeviceToHost);
   //   memcpy(res, l_f.output, sizeof(float) * 10);
 
   for (int i = 1; i < 10; ++i) {
