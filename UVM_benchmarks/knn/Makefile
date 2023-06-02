@@ -1,8 +1,8 @@
-NVCCCFLAGS =  -std=c++11 -lcuda -O0
-NVCC = /usr/local/cuda-10.2/bin/nvcc
+HIPCCFLAGS =  -std=c++11 -lamdhip64 -O0
+HIPCC  := /opt/rocm/bin/hipcc
 
-knn: knn_cuda.cu 
-	$(NVCC) ${NVCCCFLAGS} -o $@ $<
+knn: knn_hip.hip 
+	$(HIPCC) ${HIPCCFLAGS} -o $@ $<
 
 clean:
 	rm -f knn

@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /** Modifed version of knn-CUDA from https://github.com/vincentfpgarcia/kNN-CUDA
  * The modifications are
  *      removed texture memory usage
@@ -8,7 +9,7 @@
  */
 
 // Includes
-#include "cuda.h"
+#include "hip/hip_runtime.h"
 #include <cstdio>
 #include <sys/time.h>
 #include <time.h>
@@ -257,9 +258,9 @@ __global__ void cuParallelSqrt(float *dist, int width, int k) {
   * @param error        error value return by the memory allocation function
   * @param memorySize   size of memory tried to be allocated
   */
-void printErrorMessage(cudaError_t error, int memorySize) {
+void printErrorMessage(hipError_t error, int memorySize) {
   printf("==================================================\n");
-  printf("MEMORY ALLOCATION ERROR  : %s\n", cudaGetErrorString(error));
+  printf("MEMORY ALLOCATION ERROR  : %s\n", hipGetErrorString(error));
   printf("Whished allocated memory : %d\n", memorySize);
   printf("==================================================\n");
 }
@@ -296,14 +297,14 @@ void extract_cuda(float *activation, int n_batch, int n_channel, int height,
   float *extracted_activation_device;
 
   // CUDA Initialisation
-  cuInit(0);
+  hipInit(0);
 
   // Allocation of global memory for query points and for distances, CUDA_CHECK
-  cudaMalloc((void **)&activation_device,
+  hipMalloc((void **)&activation_device,
              n_batch * n_channel * height * width * size_of_float);
-  cudaMalloc((void **)&extracted_activation_device,
+  hipMalloc((void **)&extracted_activation_device,
              n_batch * n_channel * n_max_coord * size_of_float);
-  cudaMalloc((void **)&coord_device,
+  hipMalloc((void **)&coord_device,
              n_batch * n_max_coord * dim_coord * size_of_float);
 
   // Grids ans threads
@@ -311,18 +312,18 @@ void extract_cuda(float *activation, int n_batch, int n_channel, int height,
   if ((n_batch * n_max_coord * dim_coord) % 256 != 0)
     g_size_r.x += 1;
 
-  cudaMemset(extracted_activation_device, 0,
+  hipMemset(extracted_activation_device, 0,
              n_batch * n_channel * n_max_coord * size_of_float);
 
   // Copy coordinates to the device
-  cudaMemcpy(coord_device, &coords[0],
+  hipMemcpy(coord_device, &coords[0],
              n_batch * n_max_coord * dim_coord * size_of_float,
-             cudaMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   // Copy of part of query actually being treated
-  cudaMemcpy(activation_device, &activation[0],
+  hipMemcpy(activation_device, &activation[0],
              n_batch * n_channel * height * width * size_of_float,
-             cudaMemcpyHostToDevice);
+             hipMemcpyHostToDevice);
 
   // Grids ans threads
   dim3 g_size((n_batch * n_max_coord) / 256, 1, 1);
@@ -335,14 +336,14 @@ void extract_cuda(float *activation, int n_batch, int n_channel, int height,
       extracted_activation_device, n_max_coord, n_channel, height, width);
 
   // Memory copy of output from device to host
-  cudaMemcpy(extracted_activation, &extracted_activation_device[0],
+  hipMemcpy(extracted_activation, &extracted_activation_device[0],
              n_batch * n_channel * n_max_coord * size_of_float,
-             cudaMemcpyDeviceToHost);
+             hipMemcpyDeviceToHost);
 
   // Free memory
-  cudaFree(coord_device);
-  cudaFree(activation_device);
-  cudaFree(extracted_activation_device);
+  hipFree(coord_device);
+  hipFree(activation_device);
+  hipFree(extracted_activation_device);
 }
 
 /**
@@ -373,7 +374,7 @@ void knn_cuda(float *ref_host, int ref_width, float *query_host,
   // Variables
 
   // CUDA Initialisation
-  cuInit(0);
+  hipInit(0);
 
   // Grids ans threads
   dim3 g_16x16(query_width / 16, ref_width / 16, 1);
@@ -403,7 +404,7 @@ void knn_cuda(float *ref_host, int ref_width, float *query_host,
                                         ref_width, k);
   // Kernel 3: Compute square root of k first elements
   cuParallelSqrt<<<g_k_16x16, t_k_16x16>>>(dist_host, query_width, k);
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 }
 
 float compute_distance(const float *ref, int ref_nb, const float *query,
@@ -514,10 +515,10 @@ int main(void) {
   // Memory allocation
   // ref = (float *)malloc(ref_nb * dim * sizeof(float));
   // query = (float *)malloc(query_nb * dim * sizeof(float));
-  cudaMallocManaged(&ref, ref_nb * dim * sizeof(float));
-  cudaMallocManaged(&query, query_nb * dim * sizeof(float));
-  cudaMallocManaged(&dist, query_nb * ref_nb * sizeof(float));
-  cudaMallocManaged(&ind, query_nb * k * sizeof(int));
+  hipMallocManaged(&ref, ref_nb * dim * sizeof(float));
+  hipMallocManaged(&query, query_nb * dim * sizeof(float));
+  hipMallocManaged(&dist, query_nb * ref_nb * sizeof(float));
+  hipMallocManaged(&ind, query_nb * k * sizeof(int));
   dist_c = (float *)malloc(query_nb * k * sizeof(float));
   ind_c = (int *)malloc(query_nb * k * sizeof(float));
 
@@ -536,9 +537,9 @@ int main(void) {
   }
 
   // Variables for duration evaluation
-  cudaEvent_t start, stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
+  hipEvent_t start, stop;
+  hipEventCreate(&start);
+  hipEventCreate(&stop);
   float elapsed_time;
 
   // Display informations
@@ -576,7 +577,7 @@ int main(void) {
   printf("on GPU: \n");
 
   // Call kNN search CUDA
-  cudaEventRecord(start, 0);
+  hipEventRecord(start, 0);
   for (i = 0; i < iterations; i++) {
     knn_cuda(ref, ref_nb, query, query_nb, dim, k, dist, ind);
   }
@@ -591,9 +592,9 @@ int main(void) {
       nb_correct_indexes++;
     }
   }
-  cudaEventRecord(stop, 0);
-  cudaEventSynchronize(stop);
-  cudaEventElapsedTime(&elapsed_time, start, stop);
+  hipEventRecord(stop, 0);
+  hipEventSynchronize(stop);
+  hipEventElapsedTime(&elapsed_time, start, stop);
   precision_accuracy = nb_correct_precisions / ((float)query_nb * k);
   index_accuracy = nb_correct_indexes / ((float)query_nb * k);
   printf("%f, %f\n", precision_accuracy, index_accuracy);
@@ -601,12 +602,12 @@ int main(void) {
          elapsed_time / 1000, iterations, elapsed_time / (iterations * 1000));
 
   // Destroy cuda event object and free memory
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-  cudaFree(ind);
-  cudaFree(dist);
-  cudaFree(query);
-  cudaFree(ref);
+  hipEventDestroy(start);
+  hipEventDestroy(stop);
+  hipFree(ind);
+  hipFree(dist);
+  hipFree(query);
+  hipFree(ref);
   free(dist_c);
   free(ind_c);
 }
