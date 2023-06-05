@@ -109,12 +109,12 @@ int main(int argc, char const *argv[]) {
 
   // Fraction Table:
   // float *B = new float[256 * 256];
-  cudaError_t cudaStatus;
+  hipError_t hipStatus;
   float *B;
-  cudaStatus = cudaMallocManaged(&B, 256 * 256 * sizeof(float));
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipMallocManaged(&B, 256 * 256 * sizeof(float));
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
   }
   for (int i = 0; i < 256; i++)
     for (int j = 0; j < 256; j++)
@@ -126,7 +126,7 @@ int main(int argc, char const *argv[]) {
   uint8_t **X_ts = test_images;
 
   uint8_t *y_ts = test_labels;
-  // cudaError_t cudaStatus;
+  // hipError_t hipStatus;
   int idx = 0;
   for (size_t m = 0; m < class1_limit; m++) {
     for (size_t n = 0; n < class2_limit; n++) {
@@ -139,17 +139,17 @@ int main(int argc, char const *argv[]) {
         float *alpha_y = new float[L](); // alpah .* y
         // float *K_ts = new float[L_ts * L];
         float *K_ts;
-        cudaStatus = cudaMallocManaged(&K_ts, L_ts * L * sizeof(float));
-        if (cudaStatus != cudaSuccess) {
+        hipStatus = hipMallocManaged(&K_ts, L_ts * L * sizeof(float));
+        if (hipStatus != hipSuccess) {
           fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-                  cudaGetErrorString(cudaStatus));
+                  hipGetErrorString(hipStatus));
         }
 
         uint8_t *dev_X1;
-        cudaStatus = cudaMallocManaged(&dev_X1, L_ts * 785 * sizeof(uint8_t));
-        if (cudaStatus != cudaSuccess) {
+        hipStatus = hipMallocManaged(&dev_X1, L_ts * 785 * sizeof(uint8_t));
+        if (hipStatus != hipSuccess) {
           fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-                  cudaGetErrorString(cudaStatus));
+                  hipGetErrorString(hipStatus));
         }
 
         for (uint32_t i = 0; i < L_ts; i++) {
@@ -157,21 +157,21 @@ int main(int argc, char const *argv[]) {
         }
 
         uint8_t *dev_X2;
-        cudaStatus = cudaMallocManaged(&dev_X2, L * 785 * sizeof(uint8_t));
-        if (cudaStatus != cudaSuccess) {
+        hipStatus = hipMallocManaged(&dev_X2, L * 785 * sizeof(uint8_t));
+        if (hipStatus != hipSuccess) {
           fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-                  cudaGetErrorString(cudaStatus));
+                  hipGetErrorString(hipStatus));
         }
 
         for (uint32_t i = 0; i < L; i++) {
           memcpy(dev_X2 + i * 785, X[i], 785 * sizeof(uint8_t));
         }
 
-        cudaStatus =
+        hipStatus =
             compute_kernel_matrix_ts(785, L_ts, dev_X1, L, dev_X2, K_ts, B);
-        if (cudaStatus != cudaSuccess) {
+        if (hipStatus != hipSuccess) {
           fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-                  cudaGetErrorString(cudaStatus));
+                  hipGetErrorString(hipStatus));
         }
         for (size_t i = 0; i < L; i++)
           alpha_y[i] = alpha[i] * y[i];
@@ -185,9 +185,9 @@ int main(int argc, char const *argv[]) {
         alpha_y = NULL;
         // delete[] K_ts;
         // K_ts = NULL;
-        cudaFree(K_ts);
-        cudaFree(dev_X1);
-        cudaFree(dev_X2);
+        hipFree(K_ts);
+        hipFree(dev_X1);
+        hipFree(dev_X2);
 
         idx++;
         // cout << "no problem 1" << endl;
@@ -264,7 +264,7 @@ int main(int argc, char const *argv[]) {
 
   // delete[] B;
   // B = NULL;
-  cudaFree(B);
+  hipFree(B);
   return 0;
 }
 
@@ -330,19 +330,19 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
   // float *K = new float[number_of_data_1v1 *
   //                      number_of_data_1v1]; // Must be defined by `new`.
   // float *B = new float[256 * 256];
-  cudaError_t cudaStatus;
+  hipError_t hipStatus;
   float *K;
   float *B;
-  cudaStatus = cudaMallocManaged(&K, sizeof(float) * number_of_data_1v1 *
+  hipStatus = hipMallocManaged(&K, sizeof(float) * number_of_data_1v1 *
                                          number_of_data_1v1);
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaMallocManaged failed!");
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipMallocManaged failed!");
     exit(0);
   }
 
-  cudaStatus = cudaMallocManaged(&B, sizeof(float) * 256 * 256);
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaMallocManaged failed!");
+  hipStatus = hipMallocManaged(&B, sizeof(float) * 256 * 256);
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipMallocManaged failed!");
     exit(0);
   }
 
@@ -351,11 +351,11 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
       B[i * 256 + j] = pow(i / 255.0f - j / 255.0f, 2);
 
   uint8_t *dev_X;
-  cudaStatus = cudaMallocManaged(&dev_X, n_features * number_of_data_1v1 *
+  hipStatus = hipMallocManaged(&dev_X, n_features * number_of_data_1v1 *
                                              sizeof(uint8_t));
-  if (cudaStatus != cudaSuccess) {
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_kernel_matrix launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
   }
 
   for (uint32_t i = 0; i < number_of_data_1v1; i++) {
@@ -366,7 +366,7 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
   // Compute Kernel Matrix:
 
   clock_t time_started_kernelmatrix = clock();
-  cudaStatus =
+  hipStatus =
       compute_kernel_matrix(n_features, number_of_data_1v1, dev_X, K, B);
 
   clock_t time_finished_kernelmatrix = clock();
@@ -375,7 +375,7 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
               CLOCKS_PER_SEC
        << endl;
 
-  cudaFree(dev_X);
+  hipFree(dev_X);
   // Set meta parameters:
   const uint32_t L = number_of_data_1v1;
 
@@ -383,9 +383,9 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
 
   // int *iters = new int[1]();
   int *iters;
-  cudaStatus = cudaMallocManaged(&iters, sizeof(int));
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaMallocManaged failed!");
+  hipStatus = hipMallocManaged(&iters, sizeof(int));
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipMallocManaged failed!");
     // goto Error1;
     exit(0);
   }
@@ -424,25 +424,25 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
     float *mini_a;
     float *mini_s;
     float *mini_K;
-    cudaStatus = cudaMallocManaged(&mini_y, sizeof(int) * number_of_sv);
-    if (cudaStatus != cudaSuccess) {
-      fprintf(stderr, "cudaMallocManaged failed!");
+    hipStatus = hipMallocManaged(&mini_y, sizeof(int) * number_of_sv);
+    if (hipStatus != hipSuccess) {
+      fprintf(stderr, "hipMallocManaged failed!");
       exit(0);
     }
-    cudaStatus = cudaMallocManaged(&mini_a, sizeof(float) * number_of_sv);
-    if (cudaStatus != cudaSuccess) {
-      fprintf(stderr, "cudaMallocManaged failed!");
+    hipStatus = hipMallocManaged(&mini_a, sizeof(float) * number_of_sv);
+    if (hipStatus != hipSuccess) {
+      fprintf(stderr, "hipMallocManaged failed!");
       exit(0);
     }
-    cudaStatus = cudaMallocManaged(&mini_s, sizeof(float) * number_of_sv);
-    if (cudaStatus != cudaSuccess) {
-      fprintf(stderr, "cudaMallocManaged failed!");
+    hipStatus = hipMallocManaged(&mini_s, sizeof(float) * number_of_sv);
+    if (hipStatus != hipSuccess) {
+      fprintf(stderr, "hipMallocManaged failed!");
       exit(0);
     }
-    cudaStatus =
-        cudaMallocManaged(&mini_K, sizeof(float) * number_of_sv * number_of_sv);
-    if (cudaStatus != cudaSuccess) {
-      fprintf(stderr, "cudaMallocManaged failed!");
+    hipStatus =
+        hipMallocManaged(&mini_K, sizeof(float) * number_of_sv * number_of_sv);
+    if (hipStatus != hipSuccess) {
+      fprintf(stderr, "hipMallocManaged failed!");
       exit(0);
     }
 
@@ -458,13 +458,13 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
     // Call GPU kernel (including GPU data preparation):
     clock_t kernel_start_time = clock();
     if (number_of_sv > 1024) {
-      cudaStatus = kernel_minibatch_wrapper(iters, mini_a, mini_s, mini_K,
+      hipStatus = kernel_minibatch_wrapper(iters, mini_a, mini_s, mini_K,
                                             mini_y, number_of_sv, C);
     } else {
-      cudaStatus = kernel_minibatch_block_wrapper(iters, mini_a, mini_s, mini_K,
+      hipStatus = kernel_minibatch_block_wrapper(iters, mini_a, mini_s, mini_K,
                                                   mini_y, number_of_sv, C);
     }
-    if (cudaStatus != cudaSuccess) {
+    if (hipStatus != hipSuccess) {
       fprintf(stderr, "wrapper failed!");
       return -1;
     }
@@ -580,10 +580,10 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
     // mini_s = NULL;
     // delete[] mini_K;
     // mini_K = NULL;
-    cudaFree(mini_y);
-    cudaFree(mini_a);
-    cudaFree(mini_s);
-    cudaFree(mini_K);
+    hipFree(mini_y);
+    hipFree(mini_a);
+    hipFree(mini_s);
+    hipFree(mini_K);
   }
   delete[] support_vector_idx;
   support_vector_idx = NULL;
@@ -619,11 +619,11 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
     }
   }
 
-  // cudaDeviceReset must be called before exiting in order for profiling and
+  // hipDeviceReset must be called before exiting in order for profiling and
   // tracing tools such as Nsight and Visual Profiler to show complete traces.
-  cudaStatus = cudaDeviceReset();
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaDeviceReset failed!");
+  hipStatus = hipDeviceReset();
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipDeviceReset failed!");
     return -1;
   }
 
@@ -643,15 +643,15 @@ double mnist_2_class_training(int class1, int class2, int pair_index,
   // B = NULL;
   // delete[] K;
   // K = NULL;
-  cudaFree(B);
-  cudaFree(K);
+  hipFree(B);
+  hipFree(K);
   // delete[] K_ts; K_ts = NULL;
   delete[] alpha;
   alpha = NULL;
   delete[] sigma;
   sigma = NULL;
 
-  cudaFree(iters);
+  hipFree(iters);
   // delete[] iters;
   // iters = NULL;
   // No need to delete duplications: y.

@@ -5,8 +5,8 @@ by Qin Yu, Apr 2019
 #include <fstream>
 using namespace std;
 
-#include <cooperative_groups.h>
-#include <cuda.h>
+#include "hip/hip_runtime.h"
+#include <hip/hip_cooperative_groups.h>
 namespace cg = cooperative_groups;
 
 #define CUPRINTF(fmt, ...)                                                     \
@@ -127,7 +127,7 @@ extern "C" __global__ void kernel_minibatch_g(int *iters, float *alpha,
 }
 
 // Helper function for using CUDA to update sigma in parallel:
-cudaError_t kernel_minibatch_wrapper(int *iters, float *alpha, float *sigma,
+hipError_t kernel_minibatch_wrapper(int *iters, float *alpha, float *sigma,
                                      float *K, int *y, int l, int C) {
   // int *dev_iters = 0;
   // float *dev_alpha = 0;
@@ -150,128 +150,128 @@ cudaError_t kernel_minibatch_wrapper(int *iters, float *alpha, float *sigma,
   void *args[10] = {&iters,          &alpha,          &sigma,     &K, &y,
                     &dev_block_done, &grid_dimension, &dev_delta, &l, &C};
 
-  cudaError_t cudaStatus;
+  hipError_t hipStatus;
 
   // Allocate GPU buffers for all vectors:
-  // cudaStatus = cudaMalloc(&dev_iters, sizeof(int));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_iters, sizeof(int));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error1;
   // }
-  // cudaStatus = cudaMalloc(&dev_alpha, l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_alpha, l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error2;
   // }
-  // cudaStatus = cudaMalloc(&dev_sigma, l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_sigma, l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error3;
   // }
-  // cudaStatus = cudaMalloc(&dev_K, l * l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_K, l * l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error4;
   // }
-  // cudaStatus = cudaMalloc(&dev_y, l * sizeof(int));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_y, l * sizeof(int));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error5;
   // }
-  cudaStatus = cudaMallocManaged(&dev_block_done, grid_dimension * sizeof(int));
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaMallocManaged failed!");
+  hipStatus = hipMallocManaged(&dev_block_done, grid_dimension * sizeof(int));
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipMallocManaged failed!");
     goto Error5;
   }
-  cudaStatus = cudaMallocManaged(&dev_delta, 1 * sizeof(float));
-  if (cudaStatus != cudaSuccess) {
-    fprintf(stderr, "cudaMallocManaged failed!");
+  hipStatus = hipMallocManaged(&dev_delta, 1 * sizeof(float));
+  if (hipStatus != hipSuccess) {
+    fprintf(stderr, "hipMallocManaged failed!");
     goto Error5;
   }
 
   // // Copy input vectors from host memory to GPU buffers.
-  // cudaStatus =
-  //     cudaMemcpy(dev_K, K, l * l * sizeof(float), cudaMemcpyHostToDevice);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus =
+  //     hipMemcpy(dev_K, K, l * l * sizeof(float), hipMemcpyHostToDevice);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
-  // cudaStatus = cudaMemcpy(dev_y, y, l * sizeof(int), cudaMemcpyHostToDevice);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus = hipMemcpy(dev_y, y, l * sizeof(int), hipMemcpyHostToDevice);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
 
   // printf("READY TO CALL KERNEL\n");
-  cudaStatus =
-      cudaLaunchCooperativeKernel((void *)kernel_minibatch_g, grid, block, args,
-                                  sizeof(float), cudaStream_t(0));
-  if (cudaStatus != cudaSuccess) {
+  hipStatus =
+      hipLaunchCooperativeKernel((void *)kernel_minibatch_g, grid, block, args,
+                                  sizeof(float), hipStream_t(0));
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_minibatch_g launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
     goto Error5;
   }
 
   // Check for any errors launching the kernel
-  cudaStatus = cudaGetLastError();
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipGetLastError();
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_minibatch_g launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
     goto Error5;
   }
 
-  // cudaDeviceSynchronize waits for the kernel to finish, and returns
+  // hipDeviceSynchronize waits for the kernel to finish, and returns
   // any errors encountered during the launch.
-  cudaStatus = cudaDeviceSynchronize();
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipDeviceSynchronize();
+  if (hipStatus != hipSuccess) {
     fprintf(stderr,
-            "cudaDeviceSynchronize returned error code %d after launching "
+            "hipDeviceSynchronize returned error code %d after launching "
             "addKernel!\n",
-            cudaStatus);
+            hipStatus);
     goto Error5;
   }
 
   // Copy output vector from GPU buffer to host memory.
-  // cudaStatus =
-  //     cudaMemcpy(iters, dev_iters, sizeof(int), cudaMemcpyDeviceToHost);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus =
+  //     hipMemcpy(iters, dev_iters, sizeof(int), hipMemcpyDeviceToHost);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
 
-  // cudaStatus =
-  //     cudaMemcpy(alpha, dev_alpha, l * sizeof(float),
-  //     cudaMemcpyDeviceToHost);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus =
+  //     hipMemcpy(alpha, dev_alpha, l * sizeof(float),
+  //     hipMemcpyDeviceToHost);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
 
-  // cudaStatus =
-  //     cudaMemcpy(sigma, dev_sigma, l * sizeof(float),
-  //     cudaMemcpyDeviceToHost);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus =
+  //     hipMemcpy(sigma, dev_sigma, l * sizeof(float),
+  //     hipMemcpyDeviceToHost);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
   // Error6:
-  cudaFree(dev_block_done);
-  cudaFree(dev_delta);
+  hipFree(dev_block_done);
+  hipFree(dev_delta);
 Error5:
-  //   cudaFree(dev_y);
+  //   hipFree(dev_y);
   // Error4:
-  //   cudaFree(dev_K);
+  //   hipFree(dev_K);
   // Error3:
-  //   cudaFree(dev_sigma);
+  //   hipFree(dev_sigma);
   // Error2:
-  //   cudaFree(dev_alpha);
+  //   hipFree(dev_alpha);
   // Error1:
-  //   cudaFree(dev_iters);
+  //   hipFree(dev_iters);
   // Error0:
-  return cudaStatus;
+  return hipStatus;
 }
 
-cudaError_t kernel_minibatch_block_wrapper(int *iters, float *alpha,
+hipError_t kernel_minibatch_block_wrapper(int *iters, float *alpha,
                                            float *sigma, float *K, int *y,
                                            int l, int C) {
   // int *dev_iters = 0;
@@ -284,109 +284,109 @@ cudaError_t kernel_minibatch_block_wrapper(int *iters, float *alpha,
   dim3 block(l);
   void *args[7] = {&iters, &alpha, &sigma, &K, &y, &l, &C};
 
-  cudaError_t cudaStatus;
+  hipError_t hipStatus;
 
   // Allocate GPU buffers for all vectors:
-  // cudaStatus = cudaMalloc(&dev_iters, sizeof(int));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_iters, sizeof(int));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error1;
   // }
-  // cudaStatus = cudaMalloc(&dev_alpha, l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_alpha, l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error2;
   // }
-  // cudaStatus = cudaMalloc(&dev_sigma, l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_sigma, l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error3;
   // }
-  // cudaStatus = cudaMalloc(&dev_K, l * l * sizeof(float));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_K, l * l * sizeof(float));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error4;
   // }
-  // cudaStatus = cudaMalloc(&dev_y, l * sizeof(int));
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMalloc failed!");
+  // hipStatus = hipMalloc(&dev_y, l * sizeof(int));
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMalloc failed!");
   //   goto Error5;
   // }
 
   // Copy input vectors from host memory to GPU buffers.
-  // cudaStatus =
-  //     cudaMemcpy(dev_K, K, l * l * sizeof(float), cudaMemcpyHostToDevice);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus =
+  //     hipMemcpy(dev_K, K, l * l * sizeof(float), hipMemcpyHostToDevice);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
-  // cudaStatus = cudaMemcpy(dev_y, y, l * sizeof(int), cudaMemcpyHostToDevice);
-  // if (cudaStatus != cudaSuccess) {
-  //   fprintf(stderr, "cudaMemcpy failed!");
+  // hipStatus = hipMemcpy(dev_y, y, l * sizeof(int), hipMemcpyHostToDevice);
+  // if (hipStatus != hipSuccess) {
+  //   fprintf(stderr, "hipMemcpy failed!");
   //   goto Error5;
   // }
 
   // printf("READY TO CALL KERNEL\n");
-  cudaStatus = cudaLaunchKernel((void *)kernel_minibatch, grid, block, args,
-                                sizeof(float), cudaStream_t(0));
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipLaunchKernel((void *)kernel_minibatch, grid, block, args,
+                                sizeof(float), hipStream_t(0));
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_minibatch launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
     goto Error5;
   }
 
   // Check for any errors launching the kernel
-  cudaStatus = cudaGetLastError();
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipGetLastError();
+  if (hipStatus != hipSuccess) {
     fprintf(stderr, "kernel_minibatch_g launch failed: %s\n",
-            cudaGetErrorString(cudaStatus));
+            hipGetErrorString(hipStatus));
     goto Error5;
   }
 
-  // cudaDeviceSynchronize waits for the kernel to finish, and returns
+  // hipDeviceSynchronize waits for the kernel to finish, and returns
   // any errors encountered during the launch.
-  cudaStatus = cudaDeviceSynchronize();
-  if (cudaStatus != cudaSuccess) {
+  hipStatus = hipDeviceSynchronize();
+  if (hipStatus != hipSuccess) {
     fprintf(stderr,
-            "cudaDeviceSynchronize returned error code %d after launching "
+            "hipDeviceSynchronize returned error code %d after launching "
             "addKernel!\n",
-            cudaStatus);
+            hipStatus);
     goto Error5;
   }
 
 // Copy output vector from GPU buffer to host memory.
-// cudaStatus =
-//     cudaMemcpy(iters, dev_iters, sizeof(int), cudaMemcpyDeviceToHost);
-// if (cudaStatus != cudaSuccess) {
-//   fprintf(stderr, "cudaMemcpy failed!");
+// hipStatus =
+//     hipMemcpy(iters, dev_iters, sizeof(int), hipMemcpyDeviceToHost);
+// if (hipStatus != hipSuccess) {
+//   fprintf(stderr, "hipMemcpy failed!");
 //   goto Error5;
 // }
 
-// cudaStatus =
-//     cudaMemcpy(alpha, dev_alpha, l * sizeof(float),
-//     cudaMemcpyDeviceToHost);
-// if (cudaStatus != cudaSuccess) {
-//   fprintf(stderr, "cudaMemcpy failed!");
+// hipStatus =
+//     hipMemcpy(alpha, dev_alpha, l * sizeof(float),
+//     hipMemcpyDeviceToHost);
+// if (hipStatus != hipSuccess) {
+//   fprintf(stderr, "hipMemcpy failed!");
 //   goto Error5;
 // }
 
-// cudaStatus =
-//     cudaMemcpy(sigma, dev_sigma, l * sizeof(float),
-//     cudaMemcpyDeviceToHost);
-// if (cudaStatus != cudaSuccess) {
-//   fprintf(stderr, "cudaMemcpy failed!");
+// hipStatus =
+//     hipMemcpy(sigma, dev_sigma, l * sizeof(float),
+//     hipMemcpyDeviceToHost);
+// if (hipStatus != hipSuccess) {
+//   fprintf(stderr, "hipMemcpy failed!");
 //   goto Error5;
 // }
 Error5:
-  //   cudaFree(dev_y);
+  //   hipFree(dev_y);
   // Error4:
-  //   cudaFree(dev_K);
+  //   hipFree(dev_K);
   // Error3:
-  //   cudaFree(dev_sigma);
+  //   hipFree(dev_sigma);
   // Error2:
-  //   cudaFree(dev_alpha);
+  //   hipFree(dev_alpha);
   // Error1:
-  //   cudaFree(dev_iters);
+  //   hipFree(dev_iters);
   // Error0:
-  return cudaStatus;
+  return hipStatus;
 }

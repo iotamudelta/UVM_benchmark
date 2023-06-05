@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 int read_MNIST_train_labels(uint32_t &magic_number_label,
                             uint32_t &number_of_labels, uint8_t *&train_labels);
 
@@ -25,18 +26,18 @@ int read_MNIST_test_images(uint32_t &magic_number_image,
                            uint32_t &n_cols, uint32_t &n_pixels,
                            uint32_t &n_features, uint8_t **&train_images);
 
-cudaError_t kernel_minibatch_wrapper(int *iters, float *alpha, float *sigma,
+hipError_t kernel_minibatch_wrapper(int *iters, float *alpha, float *sigma,
                                      float *K, int *y, int l, int C);
 
-cudaError_t kernel_minibatch_block_wrapper(int *iters, float *alpha,
+hipError_t kernel_minibatch_block_wrapper(int *iters, float *alpha,
                                            float *sigma, float *K, int *y,
                                            int l, int C);
 
-cudaError_t compute_kernel_matrix(uint32_t n_features,
+hipError_t compute_kernel_matrix(uint32_t n_features,
                                   uint32_t number_of_data_1v1, uint8_t *dev_X,
                                   float *K, float *B);
 
-cudaError_t compute_kernel_matrix_ts(uint32_t n_features,
+hipError_t compute_kernel_matrix_ts(uint32_t n_features,
                                      uint32_t number_of_data_1v1_ts,
                                      uint8_t *dev_X1,
                                      uint32_t number_of_data_1v1,
