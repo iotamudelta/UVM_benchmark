@@ -1,7 +1,8 @@
-#include "ArffImporter.cuh"
+#include "hip/hip_runtime.h"
+#include "ArffImporter.h"
 #include "Helper.h"
 
-#include <cublas_v2.h>
+#include <hipblas/hipblas.h>
 
 #define MAX_ITER 1000
 #define LEARNING_RATE 10.0f
@@ -10,7 +11,7 @@ Node initNode(unsigned int numFeatures) {
   Node node;
   node.numFeatures = numFeatures;
   //   node.weights = (float *)malloc(numFeatures * sizeof(float));
-  cudaMallocManaged(&node.weights, numFeatures * sizeof(float));
+  hipMallocManaged(&node.weights, numFeatures * sizeof(float));
   memset(node.weights, 0, numFeatures * sizeof(float));
 
   return node;
@@ -28,36 +29,51 @@ __global__ void ComputeCost(float *__restrict__ dCostArr,
   dCostArr[instanceId] = cost;
 }
 
-inline void cudaErrorCheck(cudaError_t cudaStatus) {
-  if (cudaStatus != cudaSuccess)
+inline void hipErrorCheck(hipError_t hipStatus) {
+  if (hipStatus != hipSuccess)
     printf("kernel launch failed with error \"%s\".\n",
-           cudaGetErrorString(cudaStatus));
+           hipGetErrorString(hipStatus));
 }
 
-inline void cublasErrorCheck(cublasStatus_t cublasStatus) {
-  if (cublasStatus != CUBLAS_STATUS_SUCCESS) {
+inline void cublasErrorCheck(hipblasStatus_t hipblasStatus) {
+  if (hipblasStatus != HIPBLAS_STATUS_SUCCESS) {
     printf("CuBLAS launch failed with error\n");
-    switch (cublasStatus) {
-    case CUBLAS_STATUS_NOT_INITIALIZED:
-      printf("CUBLAS_STATUS_NOT_INITIALIZED\n");
+    switch (hipblasStatus) {
+    case HIPBLAS_STATUS_NOT_INITIALIZED:
+      printf("HIPBLAS_STATUS_NOT_INITIALIZED\n");
 
-    case CUBLAS_STATUS_ALLOC_FAILED:
-      printf("CUBLAS_STATUS_ALLOC_FAILED\n");
+    case HIPBLAS_STATUS_ALLOC_FAILED:
+      printf("HIPBLAS_STATUS_ALLOC_FAILED\n");
 
-    case CUBLAS_STATUS_INVALID_VALUE:
-      printf("CUBLAS_STATUS_INVALID_VALUE\n");
+    case HIPBLAS_STATUS_INVALID_VALUE:
+      printf("HIPBLAS_STATUS_INVALID_VALUE\n");
 
-    case CUBLAS_STATUS_ARCH_MISMATCH:
-      printf("CUBLAS_STATUS_ARCH_MISMATCH\n");
+    case HIPBLAS_STATUS_ARCH_MISMATCH:
+      printf("HIPBLAS_STATUS_ARCH_MISMATCH\n");
 
-    case CUBLAS_STATUS_MAPPING_ERROR:
-      printf("CUBLAS_STATUS_MAPPING_ERROR\n");
+    case HIPBLAS_STATUS_MAPPING_ERROR:
+      printf("HIPBLAS_STATUS_MAPPING_ERROR\n");
 
-    case CUBLAS_STATUS_EXECUTION_FAILED:
-      printf("CUBLAS_STATUS_EXECUTION_FAILED\n");
+    case HIPBLAS_STATUS_EXECUTION_FAILED:
+      printf("HIPBLAS_STATUS_EXECUTION_FAILED\n");
 
-    case CUBLAS_STATUS_INTERNAL_ERROR:
-      printf("CUBLAS_STATUS_INTERNAL_ERROR\n");
+    case HIPBLAS_STATUS_INTERNAL_ERROR:
+      printf("HIPBLAS_STATUS_INTERNAL_ERROR\n");
+
+    case HIPBLAS_STATUS_NOT_SUPPORTED:
+      printf("HIPBLAS_STATUS_NOT_SUPPORTED\n");
+
+    case HIPBLAS_STATUS_INVALID_ENUM:
+      printf("HIPBLAS_STATUS_INVALID_ENUM\n");
+
+    case HIPBLAS_STATUS_UNKNOWN:
+      printf("HIPBLAS_STATUS_UNKNOWN\n");
+
+    case HIPBLAS_STATUS_HANDLE_IS_NULLPTR:
+      printf("HIPBLAS_STATUS_HANDLE_IS_NULLPTR\n");
+
+    case HIPBLAS_STATUS_SUCCESS:
+      printf("HIPBLAS_STATUS_SUCCESS\n"); // Not possible, but throws a warning if it's not here
     }
   }
 }
@@ -81,10 +97,10 @@ int main() {
   float *dWeightArr = node.weights;
   float *dFeaCostProdArr = nullptr;
 
-  cudaErrorCheck(cudaMallocManaged(&dCostArr, numInstances * sizeof(float)));
+  hipErrorCheck(hipMallocManaged(&dCostArr, numInstances * sizeof(float)));
 
-  cudaErrorCheck(
-      cudaMallocManaged(&dFeaCostProdArr, numFeatures * sizeof(float)));
+  hipErrorCheck(
+      hipMallocManaged(&dFeaCostProdArr, numFeatures * sizeof(float)));
 
   /* Determine block and grid size of ComputeCost kernel */
   dim3 ccBlockDim;
@@ -96,8 +112,8 @@ int main() {
     ccBlockDim.x = numInstances;
 
   // Init CuBLAS
-  cublasHandle_t cublasHandle;
-  cublasErrorCheck(cublasCreate(&cublasHandle));
+  hipblasHandle_t cublasHandle;
+  cublasErrorCheck(hipblasCreate(&cublasHandle));
 
   // Gradient descent params
   float updateWParam = -LEARNING_RATE / (float)numInstances;
@@ -114,27 +130,27 @@ int main() {
   // Gradient descent
   while (iter++ < MAX_ITER) {
     // Classify
-    cublasErrorCheck(cublasSgemv(cublasHandle, CUBLAS_OP_N, numInstances,
+    cublasErrorCheck(hipblasSgemv(cublasHandle, HIPBLAS_OP_N, numInstances,
                                  numFeatures, &default_alpha, featureMatTrans,
                                  numInstances, dWeightArr, 1, &default_beta,
                                  dCostArr, 1));
     ComputeCost<<<ccGridDim, ccBlockDim>>>(dCostArr, classArr, numInstances);
-    cudaErrorCheck(cudaGetLastError());
+    hipErrorCheck(hipGetLastError());
     // Cost vec dot FeaMat-Transpose
-    cublasErrorCheck(cublasSgemv(cublasHandle, CUBLAS_OP_T, numInstances,
+    cublasErrorCheck(hipblasSgemv(cublasHandle, HIPBLAS_OP_T, numInstances,
                                  numFeatures, &default_alpha, featureMatTrans,
                                  numInstances, dCostArr, 1, &default_beta,
                                  dFeaCostProdArr, 1));
     // Update weights
-    cublasErrorCheck(cublasSaxpy(cublasHandle, numFeatures, &updateWParam,
+    cublasErrorCheck(hipblasSaxpy(cublasHandle, numFeatures, &updateWParam,
                                  dFeaCostProdArr, 1, dWeightArr, 1));
   }
-  cudaErrorCheck(cudaDeviceSynchronize());
+  hipErrorCheck(hipDeviceSynchronize());
 
-  cublasErrorCheck(cublasDestroy(cublasHandle));
-  // cudaErrorCheck(cudaMemcpy(node.weights, dWeightArr,
+  cublasErrorCheck(hipblasDestroy(cublasHandle));
+  // hipErrorCheck(hipMemcpy(node.weights, dWeightArr,
   //                           numFeatures * sizeof(float),
-  //                           cudaMemcpyDeviceToHost));
+  //                           hipMemcpyDeviceToHost));
 
   time(&end);
   dif = difftime(end, start);
@@ -142,12 +158,12 @@ int main() {
 
   printf("Updating weights completed, weight: %f\n", node.weights[0]);
 
-  //   cudaFree(dFeatureMatTrans);
-  //   cudaFree(dClassArr);
-  //   cudaFree(dWeightArr);
-  cudaFree(dCostArr);
-  cudaFree(dFeaCostProdArr);
-  cudaFree(node.weights);
+  //   hipFree(dFeatureMatTrans);
+  //   hipFree(dClassArr);
+  //   hipFree(dWeightArr);
+  hipFree(dCostArr);
+  hipFree(dFeaCostProdArr);
+  hipFree(node.weights);
 
   return 0;
 }

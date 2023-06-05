@@ -1,5 +1,5 @@
-#include "ArffImporter.cuh"
-#include <cuda.h>
+#include "ArffImporter.h"
+#include <hip/hip_runtime.h>
 
 using namespace std;
 
@@ -7,8 +7,8 @@ ArffImporter::ArffImporter() {}
 
 ArffImporter::~ArffImporter() {
   free(featureMat);
-  cudaFree(featureMatTrans);
-  cudaFree(classArr);
+  hipFree(featureMatTrans);
+  hipFree(classArr);
 
   for (char *classAttr : classVec)
     free(classAttr);
@@ -32,9 +32,9 @@ void ArffImporter::BuildFeatureMatrix() {
   //   classArr = (unsigned short *)malloc(numInstances * sizeof(unsigned
   //   short));
 
-  cudaMallocManaged(&featureMatTrans,
+  hipMallocManaged(&featureMatTrans,
                     numInstances * numFeatures * sizeof(float));
-  cudaMallocManaged(&classArr, numInstances * sizeof(unsigned short));
+  hipMallocManaged(&classArr, numInstances * sizeof(unsigned short));
 
   for (unsigned int i = 0; i < numInstances; i++) {
     float *offset = featureMat + i * numFeatures;
