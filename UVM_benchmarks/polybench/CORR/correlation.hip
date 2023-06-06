@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * correlation.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -12,7 +13,7 @@
 #include <math.h>
 #include <assert.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -155,10 +156,10 @@ void compareResults(DATA_TYPE* symmat, DATA_TYPE* symmat_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 	
@@ -259,18 +260,18 @@ void correlationCuda(DATA_TYPE* data_gpu, DATA_TYPE* mean_gpu, DATA_TYPE* stddev
 
 	t_start = rtclock();
 	mean_kernel<<< grid1, block1 >>>(mean_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	std_kernel<<< grid2, block2 >>>(mean_gpu,stddev_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	reduce_kernel<<< grid3, block3 >>>(mean_gpu,stddev_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	corr_kernel<<< grid4, block4 >>>(symmat_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);	
 	symmat_gpu[(M)*(M+1) + (M)] = 1.0;
 	// DATA_TYPE valueAtSymmatIndexMTimesMPlus1PlusMPoint = 1.0;
-	// cudaMemcpy(&(symmat_gpu[(M)*(M+1) + (M)]), &valueAtSymmatIndexMTimesMPlus1PlusMPoint, sizeof(DATA_TYPE), cudaMemcpyHostToDevice);
+	// hipMemcpy(&(symmat_gpu[(M)*(M+1) + (M)]), &valueAtSymmatIndexMTimesMPlus1PlusMPoint, sizeof(DATA_TYPE), hipMemcpyHostToDevice);
 }
 
 
@@ -294,10 +295,10 @@ int main()
 	symmat = (DATA_TYPE*)malloc((M+1)*(N+1)*sizeof(DATA_TYPE));
 
 
-	cudaMallocManaged(&data_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
-	cudaMallocManaged(&symmat_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
-	cudaMallocManaged(&stddev_gpu, sizeof(DATA_TYPE) * (M+1));
-	cudaMallocManaged(&mean_gpu, sizeof(DATA_TYPE) * (M+1));
+	hipMallocManaged(&data_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
+	hipMallocManaged(&symmat_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
+	hipMallocManaged(&stddev_gpu, sizeof(DATA_TYPE) * (M+1));
+	hipMallocManaged(&mean_gpu, sizeof(DATA_TYPE) * (M+1));
 
 	init_arrays(data, data_gpu);
     
@@ -318,10 +319,10 @@ int main()
 	free(stddev);
 	free(symmat);
 
-	cudaFree(data_gpu);
-	cudaFree(symmat_gpu);
-	cudaFree(stddev_gpu);
-	cudaFree(mean_gpu);
+	hipFree(data_gpu);
+	hipFree(symmat_gpu);
+	hipFree(stddev_gpu);
+	hipFree(mean_gpu);
 
   	return 0;
 }

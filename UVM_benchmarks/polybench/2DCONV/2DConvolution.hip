@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * 2DConvolution.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -100,10 +101,10 @@ void compareResults(DATA_TYPE* B, DATA_TYPE* B_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -136,20 +137,20 @@ void convolution2DCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu)
 	t_start = rtclock();
 
 	#ifdef PREF
-	cudaStream_t stream1;
-	cudaStream_t stream2;
-	cudaStreamCreate(&stream1);
-	cudaStreamCreate(&stream2);
+	hipStream_t stream1;
+	hipStream_t stream2;
+	hipStreamCreate(&stream1);
+	hipStreamCreate(&stream2);
 
 	for (int i = 0; i < 1; i++)
 	{
-		cudaMemPrefetchAsync(A_gpu,NI*NJ*sizeof(DATA_TYPE), GPU_DEVICE, stream1 );
-		cudaStreamSynchronize(stream1);
-		cudaMemPrefetchAsync(B_gpu,NI*NJ*sizeof(DATA_TYPE), GPU_DEVICE, stream2 );
-		cudaStreamSynchronize(stream2);
-		// cudaMemset(B_gpu,0 ,NI*NJ*sizeof(DATA_TYPE));
+		hipMemPrefetchAsync(A_gpu,NI*NJ*sizeof(DATA_TYPE), GPU_DEVICE, stream1 );
+		hipStreamSynchronize(stream1);
+		hipMemPrefetchAsync(B_gpu,NI*NJ*sizeof(DATA_TYPE), GPU_DEVICE, stream2 );
+		hipStreamSynchronize(stream2);
+		// hipMemset(B_gpu,0 ,NI*NJ*sizeof(DATA_TYPE));
 		Convolution2D_kernel<<<grid,block, 0,stream2>>>(A_gpu,B_gpu);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 	}
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);//);
@@ -157,7 +158,7 @@ void convolution2DCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu)
 		for (int i = 0; i < 1; i++)
 		{
 			Convolution2D_kernel<<<grid,block>>>(A_gpu,B_gpu);
-			cudaDeviceSynchronize();
+			hipDeviceSynchronize();
 		}
 		t_end = rtclock();
 		fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);//);
@@ -179,8 +180,8 @@ int main(int argc, char *argv[])
 
 	A = (DATA_TYPE*)malloc(NI*NJ*sizeof(DATA_TYPE));
 	B = (DATA_TYPE*)malloc(NI*NJ*sizeof(DATA_TYPE));
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NJ);
-	cudaMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NI * NJ);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NJ);
+	hipMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NI * NJ);
 	// B_outputFromGpu = (DATA_TYPE*)malloc(NI*NJ*sizeof(DATA_TYPE));
 
 	//initialize the arrays
@@ -199,8 +200,8 @@ int main(int argc, char *argv[])
 
 	free(A);
 	free(B);
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);
 	
 	return 0;
 }

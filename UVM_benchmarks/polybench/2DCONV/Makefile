@@ -1,4 +1,4 @@
 EXECUTABLE := 2DConvolution.exe
-CUFILES := 2DConvolution.cu
+HIPFILES := 2DConvolution.hip
 # DEF := -DPREF
 include ../common.mk

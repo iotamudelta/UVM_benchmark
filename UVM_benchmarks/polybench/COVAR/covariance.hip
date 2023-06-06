@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * covariance.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -124,10 +125,10 @@ void compareResults(DATA_TYPE* symmat, DATA_TYPE* symmat_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 	
 	return;
 }
@@ -197,11 +198,11 @@ void covarianceCuda(DATA_TYPE* data_gpu, DATA_TYPE* symmat_gpu, DATA_TYPE* mean_
 	
 	t_start = rtclock();
 	mean_kernel<<<grid1, block1>>>(mean_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	reduce_kernel<<<grid2, block2>>>(mean_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	covar_kernel<<<grid3, block3>>>(symmat_gpu,data_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 }
@@ -223,9 +224,9 @@ int main()
 	symmat = (DATA_TYPE*)malloc((M+1)*(M+1)*sizeof(DATA_TYPE));
 	mean = (DATA_TYPE*)malloc((M+1)*sizeof(DATA_TYPE));
 
-	cudaMallocManaged(&data_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
-	cudaMallocManaged(&symmat_gpu, sizeof(DATA_TYPE) * (M+1) * (M+1));
-	cudaMallocManaged(&mean_gpu, sizeof(DATA_TYPE) * (M+1));
+	hipMallocManaged(&data_gpu, sizeof(DATA_TYPE) * (M+1) * (N+1));
+	hipMallocManaged(&symmat_gpu, sizeof(DATA_TYPE) * (M+1) * (M+1));
+	hipMallocManaged(&mean_gpu, sizeof(DATA_TYPE) * (M+1));
 
 	init_arrays(data, data_gpu);
     
@@ -244,9 +245,9 @@ int main()
 	free(symmat);
 	free(mean);
 
-	cudaFree(data_gpu);
-	cudaFree(symmat_gpu);
-	cudaFree(mean_gpu);
+	hipFree(data_gpu);
+	hipFree(symmat_gpu);
+	hipFree(mean_gpu);
   	return 0;
 }
 

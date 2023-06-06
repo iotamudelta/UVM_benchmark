@@ -1,4 +1,4 @@
 EXECUTABLE := gramschmidt.exe
-CUFILES := gramschmidt.cu
+HIPFILES := gramschmidt.hip
 
 include ../common.mk

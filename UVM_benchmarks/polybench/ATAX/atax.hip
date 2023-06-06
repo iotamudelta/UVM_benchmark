@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * atax.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -76,10 +77,10 @@ void compareResults(DATA_TYPE *z, DATA_TYPE *z_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -149,9 +150,9 @@ void ataxGpu(DATA_TYPE* A_gpu, DATA_TYPE* x_gpu, DATA_TYPE* y_gpu, DATA_TYPE* tm
 
 	t_start = rtclock();
 	atax_kernel1<<< grid1, block >>>(A_gpu,x_gpu,tmp_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	atax_kernel2<<< grid2, block >>>(A_gpu,y_gpu,tmp_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 
@@ -178,10 +179,10 @@ int main(int argc, char** argv)
 	y = (DATA_TYPE*)malloc(NY*sizeof(DATA_TYPE));
 	tmp = (DATA_TYPE*)malloc(NX*sizeof(DATA_TYPE));
 
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NX * NY);
-	cudaMallocManaged(&x_gpu, sizeof(DATA_TYPE) * NY);
-	cudaMallocManaged(&y_gpu, sizeof(DATA_TYPE) * NY);
-	cudaMallocManaged(&tmp_gpu, sizeof(DATA_TYPE) * NX);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NX * NY);
+	hipMallocManaged(&x_gpu, sizeof(DATA_TYPE) * NY);
+	hipMallocManaged(&y_gpu, sizeof(DATA_TYPE) * NY);
+	hipMallocManaged(&tmp_gpu, sizeof(DATA_TYPE) * NX);
 
 
 	init_array(x, A, x_gpu, A_gpu);
@@ -201,10 +202,10 @@ int main(int argc, char** argv)
 	free(y);
 	free(tmp);
 	
-	cudaFree(A_gpu);
-	cudaFree(x_gpu);
-	cudaFree(y_gpu);
-	cudaFree(tmp_gpu);
+	hipFree(A_gpu);
+	hipFree(x_gpu);
+	hipFree(y_gpu);
+	hipFree(tmp_gpu);
 
   	return 0;
 }

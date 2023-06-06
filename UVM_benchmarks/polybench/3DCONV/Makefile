@@ -1,5 +1,5 @@
 EXECUTABLE := 3DConvolution.exe
-CUFILES := 3DConvolution.cu
+HIPFILES := 3DConvolution.hip
 
 include ../common.mk
 

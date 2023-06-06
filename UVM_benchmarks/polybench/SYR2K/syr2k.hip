@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * syr2k.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -112,10 +113,10 @@ void compareResults(DATA_TYPE *C, DATA_TYPE *C_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -144,7 +145,7 @@ void syr2kCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu, DATA_TYPE* C_gpu)
 	dim3 grid((size_t)ceil( ((float)N) / ((float)DIM_THREAD_BLOCK_X) ), (size_t)(ceil( ((float)N) / ((float)DIM_THREAD_BLOCK_Y) )));
 	t_start = rtclock();
 	syr2k_kernel<<<grid,block>>>(A_gpu,B_gpu,C_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 }
@@ -164,9 +165,9 @@ int main()
 	A = (DATA_TYPE*)malloc(N*M*sizeof(DATA_TYPE));
 	B = (DATA_TYPE*)malloc(N*M*sizeof(DATA_TYPE));
 	C = (DATA_TYPE*)malloc(N*M*sizeof(DATA_TYPE));
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * N * M);
-	cudaMallocManaged(&B_gpu, sizeof(DATA_TYPE) * N * M);
-	cudaMallocManaged(&C_gpu, sizeof(DATA_TYPE) * N * N);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * N * M);
+	hipMallocManaged(&B_gpu, sizeof(DATA_TYPE) * N * M);
+	hipMallocManaged(&C_gpu, sizeof(DATA_TYPE) * N * N);
 
 	init_arrays(A, B, C,A_gpu, B_gpu, C_gpu );
     
@@ -183,9 +184,9 @@ int main()
 	free(A);
 	free(B);
 	free(C);
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);
-	cudaFree(C_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);
+	hipFree(C_gpu);
 
   	return 0;
 }

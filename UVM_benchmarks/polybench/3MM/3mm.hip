@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * 3mm.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -103,10 +104,10 @@ void compareResults(DATA_TYPE *G, DATA_TYPE *G_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 	
@@ -216,11 +217,11 @@ void mm3Cuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu, DATA_TYPE* C_gpu, DATA_TYPE* D_
 
 	t_start = rtclock();
 	mm3_kernel1<<<grid1,block>>>(A_gpu, B_gpu, E_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	mm3_kernel2<<<grid2,block>>>(C_gpu, D_gpu, F_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	mm3_kernel3<<<grid3,block>>>(E_gpu, F_gpu, G_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
@@ -257,13 +258,13 @@ int main(int argc, char** argv)
 	G = (DATA_TYPE*)malloc(NI*NL*sizeof(DATA_TYPE));
 
 
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NK);
-	cudaMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NK * NJ);
-	cudaMallocManaged(&C_gpu, sizeof(DATA_TYPE) * NJ * NM);
-	cudaMallocManaged(&D_gpu, sizeof(DATA_TYPE) * NM * NL);
-	cudaMallocManaged(&E_gpu, sizeof(DATA_TYPE) * NI * NJ);
-	cudaMallocManaged(&F_gpu, sizeof(DATA_TYPE) * NJ * NL);
-	cudaMallocManaged(&G_gpu, sizeof(DATA_TYPE) * NI * NL);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NK);
+	hipMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NK * NJ);
+	hipMallocManaged(&C_gpu, sizeof(DATA_TYPE) * NJ * NM);
+	hipMallocManaged(&D_gpu, sizeof(DATA_TYPE) * NM * NL);
+	hipMallocManaged(&E_gpu, sizeof(DATA_TYPE) * NI * NJ);
+	hipMallocManaged(&F_gpu, sizeof(DATA_TYPE) * NJ * NL);
+	hipMallocManaged(&G_gpu, sizeof(DATA_TYPE) * NI * NL);
 
 	init_array(A, B, C, D, A_gpu, B_gpu, C_gpu, D_gpu);
 
@@ -289,13 +290,13 @@ int main(int argc, char** argv)
 	free(F);
 	free(G);
 
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);
-	cudaFree(C_gpu);
-	cudaFree(D_gpu);
-	cudaFree(E_gpu);
-	cudaFree(F_gpu);
-	cudaFree(G_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);
+	hipFree(C_gpu);
+	hipFree(D_gpu);
+	hipFree(E_gpu);
+	hipFree(F_gpu);
+	hipFree(G_gpu);
 
 	return 0;
 }

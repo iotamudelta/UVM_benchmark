@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * gesummv.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -96,10 +97,10 @@ void compareResults(DATA_TYPE* y, DATA_TYPE* y_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -121,35 +122,35 @@ __global__ void gesummv_kernel(DATA_TYPE *a, DATA_TYPE *b, DATA_TYPE *x, DATA_TY
 
 void gesummvCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu, DATA_TYPE* x_gpu, DATA_TYPE* y_gpu, DATA_TYPE* tmp_gpu)
 {
-	cudaStream_t stream1;
-	cudaStream_t stream2;
-	cudaStream_t stream3;
-	cudaStream_t stream4;
-	cudaStream_t stream5;
-	cudaStreamCreate(&stream1);
-	cudaStreamCreate(&stream2);
-	cudaStreamCreate(&stream3);
-	cudaStreamCreate(&stream4);
-	cudaStreamCreate(&stream5);
+	hipStream_t stream1;
+	hipStream_t stream2;
+	hipStream_t stream3;
+	hipStream_t stream4;
+	hipStream_t stream5;
+	hipStreamCreate(&stream1);
+	hipStreamCreate(&stream2);
+	hipStreamCreate(&stream3);
+	hipStreamCreate(&stream4);
+	hipStreamCreate(&stream5);
 
 	#ifdef PREF
 	double t_start, t_end;		
 	dim3 block(DIM_THREAD_BLOCK_X, DIM_THREAD_BLOCK_Y);
 	dim3 grid((unsigned int)ceil( ((float)N) / ((float)block.x) ), 1);
-	cudaMemPrefetchAsync(A_gpu,N*N*sizeof(DATA_TYPE), GPU_DEVICE, stream1 );
-	cudaMemPrefetchAsync(B_gpu,N*N*sizeof(DATA_TYPE), GPU_DEVICE, stream2 );
-	cudaMemPrefetchAsync(x_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream3 );
-	cudaMemPrefetchAsync(y_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream4 );
-	cudaMemPrefetchAsync(tmp_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream5 );
-	cudaStreamSynchronize(stream1);
-	cudaStreamSynchronize(stream2);
-	cudaStreamSynchronize(stream3);
-	cudaStreamSynchronize(stream4);
-	cudaStreamSynchronize(stream5);
+	hipMemPrefetchAsync(A_gpu,N*N*sizeof(DATA_TYPE), GPU_DEVICE, stream1 );
+	hipMemPrefetchAsync(B_gpu,N*N*sizeof(DATA_TYPE), GPU_DEVICE, stream2 );
+	hipMemPrefetchAsync(x_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream3 );
+	hipMemPrefetchAsync(y_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream4 );
+	hipMemPrefetchAsync(tmp_gpu,N*sizeof(DATA_TYPE), GPU_DEVICE, stream5 );
+	hipStreamSynchronize(stream1);
+	hipStreamSynchronize(stream2);
+	hipStreamSynchronize(stream3);
+	hipStreamSynchronize(stream4);
+	hipStreamSynchronize(stream5);
 	t_start = rtclock();
 	for (int i = 0; i < 1; i++){
 	gesummv_kernel<<< grid, block, 0 , stream5>>>(A_gpu,B_gpu,x_gpu, y_gpu, tmp_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	}
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
@@ -160,7 +161,7 @@ void gesummvCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu, DATA_TYPE* x_gpu, DATA_TYPE
 	t_start = rtclock();
 	for (int i = 0; i < 1; i++){
 	gesummv_kernel<<< grid, block>>>(A_gpu,B_gpu,x_gpu, y_gpu, tmp_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	}
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
@@ -189,11 +190,11 @@ int main(int argc, char *argv[])
 	y = (DATA_TYPE*)malloc(N*sizeof(DATA_TYPE));
 	tmp = (DATA_TYPE*)malloc(N*sizeof(DATA_TYPE));
 
-	cudaMallocManaged((void **)&A_gpu, sizeof(DATA_TYPE) * N * N);
-	cudaMallocManaged((void **)&B_gpu, sizeof(DATA_TYPE) * N * N);
-	cudaMallocManaged((void **)&x_gpu, sizeof(DATA_TYPE) * N);
-	cudaMallocManaged((void **)&y_gpu, sizeof(DATA_TYPE) * N);
-	cudaMallocManaged((void **)&tmp_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged((void **)&A_gpu, sizeof(DATA_TYPE) * N * N);
+	hipMallocManaged((void **)&B_gpu, sizeof(DATA_TYPE) * N * N);
+	hipMallocManaged((void **)&x_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged((void **)&y_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged((void **)&tmp_gpu, sizeof(DATA_TYPE) * N);
 
 	init(A, x, A_gpu, x_gpu);
 	
@@ -212,11 +213,11 @@ int main(int argc, char *argv[])
 	free(x);  
 	free(y);
 	free(tmp);
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);  
-	cudaFree(x_gpu);  
-	cudaFree(y_gpu);
-	cudaFree(tmp_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);  
+	hipFree(x_gpu);  
+	hipFree(y_gpu);
+	hipFree(tmp_gpu);
 
 	return 0;
 }

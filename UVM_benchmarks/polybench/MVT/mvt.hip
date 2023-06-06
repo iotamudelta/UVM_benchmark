@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * mvt.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -105,10 +106,10 @@ void compareResults(DATA_TYPE* x1, DATA_TYPE* x1_outputFromGpu, DATA_TYPE* x2, D
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -149,7 +150,7 @@ void mvtCuda(DATA_TYPE* a_gpu, DATA_TYPE* x1_gpu, DATA_TYPE* x2_gpu, DATA_TYPE* 
 	t_start = rtclock();
 	mvt_kernel1<<<grid,block>>>(a_gpu,x1_gpu,y_1_gpu);
 	mvt_kernel2<<<grid,block>>>(a_gpu,x2_gpu,y_2_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 }
@@ -174,11 +175,11 @@ int main()
 	x2 = (DATA_TYPE*)malloc(N*sizeof(DATA_TYPE));
 	y_1 = (DATA_TYPE*)malloc(N*sizeof(DATA_TYPE));
 	y_2 = (DATA_TYPE*)malloc(N*sizeof(DATA_TYPE));
-	cudaMallocManaged(&a_gpu, sizeof(DATA_TYPE) * N * N);
-	cudaMallocManaged(&x1_gpu, sizeof(DATA_TYPE) * N);
-	cudaMallocManaged(&x2_gpu, sizeof(DATA_TYPE) * N);
-	cudaMallocManaged(&y_1_gpu, sizeof(DATA_TYPE) * N);
-	cudaMallocManaged(&y_2_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged(&a_gpu, sizeof(DATA_TYPE) * N * N);
+	hipMallocManaged(&x1_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged(&x2_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged(&y_1_gpu, sizeof(DATA_TYPE) * N);
+	hipMallocManaged(&y_2_gpu, sizeof(DATA_TYPE) * N);
 	init_array(a, x1, x2, y_1, y_2, a_gpu, x1_gpu, x2_gpu, y_1_gpu, y_2_gpu);
 	
 	GPU_argv_init();
@@ -200,11 +201,11 @@ int main()
 	free(x2);
 	free(y_1);
 	free(y_2);
-	cudaFree(a_gpu);
-	cudaFree(x1_gpu);
-	cudaFree(x2_gpu);
-	cudaFree(y_1_gpu);
-	cudaFree(y_2_gpu);
+	hipFree(a_gpu);
+	hipFree(x1_gpu);
+	hipFree(x2_gpu);
+	hipFree(y_1_gpu);
+	hipFree(y_2_gpu);
   	return 0;
 }
 

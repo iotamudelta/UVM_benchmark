@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * gramschmidt.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -109,10 +110,10 @@ void compareResults(DATA_TYPE* A, DATA_TYPE* A_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );	
+	hipSetDevice( GPU_DEVICE );	
 	return;
 }
 
@@ -181,11 +182,11 @@ void gramschmidtCuda(DATA_TYPE* A_gpu, DATA_TYPE* R_gpu, DATA_TYPE* Q_gpu)
 	for (k = 0; k < N; k++)
 	{
 		gramschmidt_kernel1<<<gridKernel1,block>>>(A_gpu, R_gpu, Q_gpu, k);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 		gramschmidt_kernel2<<<gridKernel2,block>>>(A_gpu, R_gpu, Q_gpu, k);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 		gramschmidt_kernel3<<<gridKernel3,block>>>(A_gpu, R_gpu, Q_gpu, k);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 	}
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
@@ -208,9 +209,9 @@ int main(int argc, char *argv[])
 	R = (DATA_TYPE*)malloc(M*N*sizeof(DATA_TYPE));  
 	Q = (DATA_TYPE*)malloc(M*N*sizeof(DATA_TYPE));  
 
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * M * N);
-	cudaMallocManaged(&R_gpu, sizeof(DATA_TYPE) * M * N);
-	cudaMallocManaged(&Q_gpu, sizeof(DATA_TYPE) * M * N);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * M * N);
+	hipMallocManaged(&R_gpu, sizeof(DATA_TYPE) * M * N);
+	hipMallocManaged(&Q_gpu, sizeof(DATA_TYPE) * M * N);
 	
 	init_array(A, A_gpu);
 	
@@ -227,9 +228,9 @@ int main(int argc, char *argv[])
 	free(A);
 	free(R);
 	free(Q);  
-	cudaFree(A_gpu);
-	cudaFree(R_gpu);
-	cudaFree(Q_gpu);
+	hipFree(A_gpu);
+	hipFree(R_gpu);
+	hipFree(Q_gpu);
 
     	return 0;
 }

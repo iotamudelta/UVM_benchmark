@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * 3DConvolution.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -112,10 +113,10 @@ void compareResults(DATA_TYPE* B, DATA_TYPE* B_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -159,7 +160,7 @@ void convolution3DCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu)
 		convolution3D_kernel<<< grid, block >>>(A_gpu, B_gpu, i);
 	}
 
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);
 
@@ -177,8 +178,8 @@ int main(int argc, char *argv[])
 
 	A = (DATA_TYPE*)malloc(NI*NJ*NK*sizeof(DATA_TYPE));
 	B = (DATA_TYPE*)malloc(NI*NJ*NK*sizeof(DATA_TYPE));
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NJ * NK);
-	cudaMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NI * NJ * NK);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NJ * NK);
+	hipMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NI * NJ * NK);
 	
 	init(A, A_gpu);
 	
@@ -195,8 +196,8 @@ int main(int argc, char *argv[])
 
 	free(A);
 	free(B);
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);
 
     	return 0;
 }

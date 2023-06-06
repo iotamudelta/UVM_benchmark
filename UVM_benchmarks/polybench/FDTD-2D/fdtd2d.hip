@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * fdtd2d.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -13,7 +14,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -122,10 +123,10 @@ void compareResults(DATA_TYPE* hz1, DATA_TYPE* hz2)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -186,11 +187,11 @@ void fdtdCuda(DATA_TYPE* _fict_gpu, DATA_TYPE* ex_gpu, DATA_TYPE* ey_gpu, DATA_T
 	for(int t = 0; t< tmax; t++)
 	{
 		fdtd_step1_kernel<<<grid,block>>>(_fict_gpu, ex_gpu, ey_gpu, hz_gpu, t);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 		fdtd_step2_kernel<<<grid,block>>>(ex_gpu, ey_gpu, hz_gpu, t);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 		fdtd_step3_kernel<<<grid,block>>>(ex_gpu, ey_gpu, hz_gpu, t);
-		cudaDeviceSynchronize();
+		hipDeviceSynchronize();
 	}
 	
 	t_end = rtclock();
@@ -217,10 +218,10 @@ int main()
 	ey = (DATA_TYPE*)malloc((NX+1)*NY*sizeof(DATA_TYPE));
 	hz = (DATA_TYPE*)malloc(NX*NY*sizeof(DATA_TYPE));
 
-	cudaMallocManaged(&_fict_gpu, sizeof(DATA_TYPE) * tmax);
-	cudaMallocManaged(&ex_gpu, sizeof(DATA_TYPE) * NX * (NY + 1));
-	cudaMallocManaged(&ey_gpu, sizeof(DATA_TYPE) * (NX + 1) * NY);
-	cudaMallocManaged(&hz_gpu, sizeof(DATA_TYPE) * NX * NY);
+	hipMallocManaged(&_fict_gpu, sizeof(DATA_TYPE) * tmax);
+	hipMallocManaged(&ex_gpu, sizeof(DATA_TYPE) * NX * (NY + 1));
+	hipMallocManaged(&ey_gpu, sizeof(DATA_TYPE) * (NX + 1) * NY);
+	hipMallocManaged(&hz_gpu, sizeof(DATA_TYPE) * NX * NY);
 
 	init_arrays(_fict_, ex, ey, hz, _fict_gpu, ex_gpu, ey_gpu, hz_gpu);
 
@@ -240,10 +241,10 @@ int main()
 	free(ey);
 	free(hz);
 			
-	cudaFree(_fict_gpu);
-	cudaFree(ex_gpu);
-	cudaFree(ey_gpu);
-	cudaFree(hz_gpu);
+	hipFree(_fict_gpu);
+	hipFree(ex_gpu);
+	hipFree(ey_gpu);
+	hipFree(hz_gpu);
 	return 0;
 }
 

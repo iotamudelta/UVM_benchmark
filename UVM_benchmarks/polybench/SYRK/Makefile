@@ -1,4 +1,4 @@
 EXECUTABLE := syrk.exe
-CUFILES := syrk.cu
+HIPFILES := syrk.hip
 
 include ../common.mk

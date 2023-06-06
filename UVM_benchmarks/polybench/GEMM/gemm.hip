@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 /**
  * gemm.cu: This file is part of the PolyBench/GPU 1.0 test suite.
  *
@@ -14,7 +15,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "../../../common/polybenchUtilFuncts.h"
 
@@ -117,10 +118,10 @@ void compareResults(DATA_TYPE* C, DATA_TYPE* C_outputFromGpu)
 
 void GPU_argv_init()
 {
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, GPU_DEVICE);
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties(&deviceProp, GPU_DEVICE);
 	printf("setting device %d with name %s\n",GPU_DEVICE,deviceProp.name);
-	cudaSetDevice( GPU_DEVICE );
+	hipSetDevice( GPU_DEVICE );
 }
 
 
@@ -151,7 +152,7 @@ void gemmCuda(DATA_TYPE* A_gpu, DATA_TYPE* B_gpu, DATA_TYPE* C_gpu)
 	t_start = rtclock();
 
 	gemm_kernel<<< grid, block >>>(A_gpu, B_gpu, C_gpu);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 
 	t_end = rtclock();
 	fprintf(stdout, "GPU Runtime: %0.6lfs\n", t_end - t_start);   
@@ -174,9 +175,9 @@ int main(int argc, char *argv[])
 	B = (DATA_TYPE*)malloc(NK*NJ*sizeof(DATA_TYPE));   
 	C = (DATA_TYPE*)malloc(NI*NJ*sizeof(DATA_TYPE)); 
 
-	cudaMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NK);
-	cudaMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NK * NJ);
-	cudaMallocManaged(&C_gpu, sizeof(DATA_TYPE) * NI * NJ);
+	hipMallocManaged(&A_gpu, sizeof(DATA_TYPE) * NI * NK);
+	hipMallocManaged(&B_gpu, sizeof(DATA_TYPE) * NK * NJ);
+	hipMallocManaged(&C_gpu, sizeof(DATA_TYPE) * NI * NJ);
 
 	init(A, B, C, A_gpu, B_gpu, C_gpu);
 	
@@ -194,9 +195,9 @@ int main(int argc, char *argv[])
 	free(A);
 	free(B);  
 	free(C);  
-	cudaFree(A_gpu);
-	cudaFree(B_gpu);
-	cudaFree(C_gpu);
+	hipFree(A_gpu);
+	hipFree(B_gpu);
+	hipFree(C_gpu);
     return 0;
 }
 
