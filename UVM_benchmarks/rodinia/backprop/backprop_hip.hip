@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <sys/time.h>
 
 // includes, kernels
-#include "backprop_cuda_kernel.cu"
+#include "backprop_hip_kernel.hip"
 #include "backprop.h"
 
 #define ITERATIONS 1
@@ -83,11 +83,11 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
   dim3  threads(16 , 16);
 
 
-  cudaMallocManaged(&input_cuda, (in + 1) * sizeof(float));
-  cudaMallocManaged(&output_hidden_cuda, (hid + 1) * sizeof(float));
-  cudaMallocManaged(&input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float));
-  cudaMallocManaged(&hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
-  cudaMallocManaged(&input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float));
+  hipMallocManaged(&input_cuda, (in + 1) * sizeof(float));
+  hipMallocManaged(&output_hidden_cuda, (hid + 1) * sizeof(float));
+  hipMallocManaged(&input_hidden_cuda, (in + 1) * (hid + 1) * sizeof(float));
+  hipMallocManaged(&hidden_partial_sum, num_blocks * WIDTH * sizeof(float));
+  hipMallocManaged(&input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float));
   memcpy(input_cuda,net->input_units, (in + 1)  *sizeof(float));
  
   // this preprocessing stage is added to correct the bugs of wrong memcopy using two-dimensional net->inputweights
@@ -104,24 +104,24 @@ void bpnn_train_cuda(BPNN *net, float *eo, float *eh)
 
 
 #ifdef PREF
-cudaStream_t stream1;
-cudaStream_t stream2;
-cudaStream_t stream3;
-cudaStream_t stream4;
-cudaStream_t stream5;
-cudaStreamCreate(&stream1);
-cudaStreamCreate(&stream2);
-cudaStreamCreate(&stream3);
-cudaStreamCreate(&stream4);
-cudaStreamCreate(&stream5);
-cudaMemPrefetchAsync(input_cuda,(in + 1) * sizeof(float), 0, stream1 );
-cudaMemPrefetchAsync(output_hidden_cuda,(hid + 1) * sizeof(float), 0, stream2 );
-cudaMemPrefetchAsync(input_hidden_cuda,(in + 1) * (hid + 1) * sizeof(float), 0, stream3 );
-cudaMemPrefetchAsync(hidden_partial_sum,num_blocks * WIDTH * sizeof(float), 0, stream4 );
-cudaStreamSynchronize(stream1);
-cudaStreamSynchronize(stream2);
-cudaStreamSynchronize(stream3);
-cudaStreamSynchronize(stream4);
+hipStream_t stream1;
+hipStream_t stream2;
+hipStream_t stream3;
+hipStream_t stream4;
+hipStream_t stream5;
+hipStreamCreate(&stream1);
+hipStreamCreate(&stream2);
+hipStreamCreate(&stream3);
+hipStreamCreate(&stream4);
+hipStreamCreate(&stream5);
+hipMemPrefetchAsync(input_cuda,(in + 1) * sizeof(float), 0, stream1 );
+hipMemPrefetchAsync(output_hidden_cuda,(hid + 1) * sizeof(float), 0, stream2 );
+hipMemPrefetchAsync(input_hidden_cuda,(in + 1) * (hid + 1) * sizeof(float), 0, stream3 );
+hipMemPrefetchAsync(hidden_partial_sum,num_blocks * WIDTH * sizeof(float), 0, stream4 );
+hipStreamSynchronize(stream1);
+hipStreamSynchronize(stream2);
+hipStreamSynchronize(stream3);
+hipStreamSynchronize(stream4);
 #endif
 
 
@@ -136,7 +136,7 @@ for(int i = 0; i < ITERATIONS; i ++){
 											  in,
 											  hid);
  
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 }
 #else
 printf("Performing GPU computation\n");  
@@ -148,14 +148,14 @@ for(int i = 0; i < ITERATIONS; i ++){
 											  in,
 											  hid);
  
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 }
 
 #endif
 
   
   
-  // cudaMemcpy(partial_sum, hidden_partial_sum, num_blocks * WIDTH * sizeof(float), cudaMemcpyDeviceToHost);
+  // hipMemcpy(partial_sum, hidden_partial_sum, num_blocks * WIDTH * sizeof(float), hipMemcpyDeviceToHost);
      
   for (int j = 1; j <= hid; j++) {
     sum = 0.0;
@@ -176,19 +176,19 @@ for(int i = 0; i < ITERATIONS; i ++){
 
 
 
-  cudaMallocManaged( &hidden_delta_cuda, (hid + 1) * sizeof(float));
+  hipMallocManaged( &hidden_delta_cuda, (hid + 1) * sizeof(float));
   memcpy(hidden_delta_cuda, net->hidden_delta,(hid + 1)* sizeof(float));
 
 
   #ifdef PREF
-  cudaMemPrefetchAsync(input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float), 0, stream1 );
-  cudaMemPrefetchAsync(hidden_delta_cuda,(hid + 1) * sizeof(float), 0, stream2 );
-  // cudaMemPrefetchAsync(input_cuda,(in + 1) * sizeof(float), 0, stream3 );
-  // cudaMemPrefetchAsync(input_hidden_cuda,(in + 1) * (hid + 1) * sizeof(float), 0, stream4 );
-  cudaStreamSynchronize(stream1);
-  cudaStreamSynchronize(stream2);
-  // cudaStreamSynchronize(stream3);
-  // cudaStreamSynchronize(stream4);
+  hipMemPrefetchAsync(input_prev_weights_cuda, (in + 1) * (hid + 1) * sizeof(float), 0, stream1 );
+  hipMemPrefetchAsync(hidden_delta_cuda,(hid + 1) * sizeof(float), 0, stream2 );
+  // hipMemPrefetchAsync(input_cuda,(in + 1) * sizeof(float), 0, stream3 );
+  // hipMemPrefetchAsync(input_hidden_cuda,(in + 1) * (hid + 1) * sizeof(float), 0, stream4 );
+  hipStreamSynchronize(stream1);
+  hipStreamSynchronize(stream2);
+  // hipStreamSynchronize(stream3);
+  // hipStreamSynchronize(stream4);
     for(int i = 0; i < ITERATIONS; i ++){
       bpnn_adjust_weights_cuda<<< grid, threads, 0, stream5 >>>(hidden_delta_cuda,  
                             hid, 
@@ -197,7 +197,7 @@ for(int i = 0; i < ITERATIONS; i ++){
                             input_hidden_cuda, 
                             input_prev_weights_cuda
                             );
-      cudaDeviceSynchronize();
+      hipDeviceSynchronize();
                           }
 
   #else
@@ -210,18 +210,18 @@ for(int i = 0; i < ITERATIONS; i ++){
                           input_hidden_cuda, 
                           input_prev_weights_cuda
                           );
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
                         }
   #endif 
           
   memcpy(net->input_units, input_cuda, (in + 1)  * sizeof(float));
     
-  cudaFree(input_cuda);
-  cudaFree(output_hidden_cuda);
-  cudaFree(input_hidden_cuda);
-  cudaFree(hidden_partial_sum);
-  cudaFree(input_prev_weights_cuda);
-  cudaFree(hidden_delta_cuda);
+  hipFree(input_cuda);
+  hipFree(output_hidden_cuda);
+  hipFree(input_hidden_cuda);
+  hipFree(hidden_partial_sum);
+  hipFree(input_prev_weights_cuda);
+  hipFree(hidden_delta_cuda);
 
   
   

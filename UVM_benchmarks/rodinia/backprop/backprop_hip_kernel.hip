@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "backprop.h"
 #include "math.h"
-#include "cuda.h"
+#include "hip/hip_runtime.h"
 
 
 __global__ void
