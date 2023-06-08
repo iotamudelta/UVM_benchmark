@@ -1,3 +1,4 @@
+#include "hip/hip_runtime.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -223,20 +224,20 @@ int compute_tran_temp(float *MatrixPower, float *MatrixTemp[2], int col,
 
 #ifdef PREF
 
-cudaStream_t stream1;
-cudaStream_t stream2;
-  cudaStream_t stream3;
-  cudaStream_t stream4;
-cudaStreamCreate(&stream1);
-cudaStreamCreate(&stream2);
-  cudaStreamCreate(&stream3);
-  cudaStreamCreate(&stream4);
-cudaMemPrefetchAsync(MatrixPower,row*col*sizeof(float), 0, stream1 );
-cudaMemPrefetchAsync(MatrixTemp[0],sizeof(float)*row*col, 0, stream2 );
-cudaMemPrefetchAsync(MatrixTemp[1],sizeof(float)*row*col, 0, stream3 );
-cudaStreamSynchronize(stream1);
-cudaStreamSynchronize(stream2);
-cudaStreamSynchronize(stream3);
+hipStream_t stream1;
+hipStream_t stream2;
+  hipStream_t stream3;
+  hipStream_t stream4;
+hipStreamCreate(&stream1);
+hipStreamCreate(&stream2);
+  hipStreamCreate(&stream3);
+  hipStreamCreate(&stream4);
+hipMemPrefetchAsync(MatrixPower,row*col*sizeof(float), 0, stream1 );
+hipMemPrefetchAsync(MatrixTemp[0],sizeof(float)*row*col, 0, stream2 );
+hipMemPrefetchAsync(MatrixTemp[1],sizeof(float)*row*col, 0, stream3 );
+hipStreamSynchronize(stream1);
+hipStreamSynchronize(stream2);
+hipStreamSynchronize(stream3);
 
 
   dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
@@ -266,7 +267,7 @@ cudaStreamSynchronize(stream3);
         MIN(num_iterations, total_iterations - t), MatrixPower, MatrixTemp[src],
         MatrixTemp[dst], col, row, borderCols, borderRows, Cap, Rx, Ry, Rz,
         step, time_elapsed);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
   }
   return dst;
 
@@ -298,7 +299,7 @@ cudaStreamSynchronize(stream3);
         MIN(num_iterations, total_iterations - t), MatrixPower, MatrixTemp[src],
         MatrixTemp[dst], col, row, borderCols, borderRows, Cap, Rx, Ry, Rz,
         step, time_elapsed);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
   }
   return dst;
 #endif
@@ -364,8 +365,8 @@ void run(int argc, char **argv) {
       grid_rows / smallBlockRow + ((grid_rows % smallBlockRow == 0) ? 0 : 1);
   float *MatrixTemp[2], *MatrixPower;
   //   FilesavingTemp = (float *)malloc(size * sizeof(float));
-  cudaMallocManaged(&MatrixTemp[0], sizeof(float) * size);
-  cudaMallocManaged(&MatrixTemp[1], sizeof(float) * size);
+  hipMallocManaged(&MatrixTemp[0], sizeof(float) * size);
+  hipMallocManaged(&MatrixTemp[1], sizeof(float) * size);
   //   FilesavingPower = (float *)malloc(size * sizeof(float));
   MatrixOut = (float *)calloc(size, sizeof(float));
 
@@ -380,14 +381,14 @@ void run(int argc, char **argv) {
   readinput(MatrixTemp[0], grid_rows, grid_cols, tfile);
   readinput(MatrixTemp[1], grid_rows, grid_cols, pfile);
 
-  //     cudaMalloc((void**)&MatrixTemp[0], sizeof(float)*size);
-  //     cudaMalloc((void**)&MatrixTemp[1], sizeof(float)*size);
-  //   cudaMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
-  //              cudaMemcpyHostToDevice);
+  //     hipMalloc((void**)&MatrixTemp[0], sizeof(float)*size);
+  //     hipMalloc((void**)&MatrixTemp[1], sizeof(float)*size);
+  //   hipMemcpy(MatrixTemp[0], FilesavingTemp, sizeof(float) * size,
+  //              hipMemcpyHostToDevice);
 
-  cudaMallocManaged(&MatrixPower, sizeof(float) * size);
-  //   cudaMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
-  //              cudaMemcpyHostToDevice);
+  hipMallocManaged(&MatrixPower, sizeof(float) * size);
+  //   hipMemcpy(MatrixPower, FilesavingPower, sizeof(float) * size,
+  //              hipMemcpyHostToDevice);
   printf("Start computing the transient temperature\n");
   int ret= 0;
 
@@ -397,13 +398,13 @@ void run(int argc, char **argv) {
                               blockRows, borderCols, borderRows);
   printf("Ending simulation\n");
   }
-  //   cudaMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
-  //              cudaMemcpyDeviceToHost);
+  //   hipMemcpy(MatrixOut, MatrixTemp[ret], sizeof(float) * size,
+  //              hipMemcpyDeviceToHost);
 
   writeoutput(MatrixTemp[ret], grid_rows, grid_cols, ofile);
 
-  cudaFree(MatrixPower);
-  cudaFree(MatrixTemp[0]);
-  cudaFree(MatrixTemp[1]);
+  hipFree(MatrixPower);
+  hipFree(MatrixTemp[0]);
+  hipFree(MatrixTemp[1]);
   //   free(MatrixOut);
 }
