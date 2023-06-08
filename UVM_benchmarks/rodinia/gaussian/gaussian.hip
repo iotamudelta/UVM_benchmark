@@ -12,7 +12,7 @@
  ** Modified by Chris Gregg for CUDA, 07/20/2009
  **-----------------------------------------------------------
  */
-#include "cuda.h"
+#include "hip/hip_runtime.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -133,16 +133,16 @@ int main(int argc, char *argv[]) {
         printf("Create matrix internally in parse, size = %d \n", Size);
 
         // a = (float *)malloc(Size * Size * sizeof(float));
-        cudaMallocManaged(&a, Size * Size * sizeof(float));
+        hipMallocManaged(&a, Size * Size * sizeof(float));
         create_matrix(a, Size);
 
         // b = (float *)malloc(Size * sizeof(float));
-        cudaMallocManaged(&b, Size * Size * sizeof(float));
+        hipMallocManaged(&b, Size * Size * sizeof(float));
         for (j = 0; j < Size; j++)
           b[j] = 1.0;
 
         // m = (float *)malloc(Size * Size * sizeof(float));
-        cudaMallocManaged(&m, Size * Size * sizeof(float));
+        hipMallocManaged(&m, Size * Size * sizeof(float));
         break;
       case 'f': // platform
         i++;
@@ -193,23 +193,23 @@ int main(int argc, char *argv[]) {
   /*printf("%d,%d\n",size,time_total);
   fprintf(stderr,"%d,%d\n",size,time_total);*/
 
-  cudaFree(m);
-  cudaFree(a);
-  cudaFree(b);
+  hipFree(m);
+  hipFree(a);
+  hipFree(b);
 }
 /*------------------------------------------------------
  ** PrintDeviceProperties
  **-----------------------------------------------------
  */
 void PrintDeviceProperties() {
-  cudaDeviceProp deviceProp;
+  hipDeviceProp_t deviceProp;
   int nDevCount = 0;
 
-  cudaGetDeviceCount(&nDevCount);
+  hipGetDeviceCount(&nDevCount);
   printf("Total Device found: %d", nDevCount);
   for (int nDeviceIdx = 0; nDeviceIdx < nDevCount; ++nDeviceIdx) {
     memset(&deviceProp, 0, sizeof(deviceProp));
-    if (cudaSuccess == cudaGetDeviceProperties(&deviceProp, nDeviceIdx)) {
+    if (hipSuccess == hipGetDeviceProperties(&deviceProp, nDeviceIdx)) {
       printf("\nDevice Name \t\t - %s ", deviceProp.name);
       printf("\n**************************************");
       printf("\nTotal Global Memory\t\t\t - %lu KB",
@@ -234,12 +234,13 @@ void PrintDeviceProperties() {
       printf("\nClock rate \t\t\t\t - %d KHz", deviceProp.clockRate);
       printf("\nTexture Alignment \t\t\t - %zu bytes",
              deviceProp.textureAlignment);
-      printf("\nDevice Overlap \t\t\t\t - %s",
-             deviceProp.deviceOverlap ? "Allowed" : "Not Allowed");
+      // deviceOverlap not found in hipDeviceProp_t
+      //printf("\nDevice Overlap \t\t\t\t - %s",
+      //       deviceProp.deviceOverlap ? "Allowed" : "Not Allowed");
       printf("\nNumber of Multi processors \t\t - %d\n\n",
              deviceProp.multiProcessorCount);
     } else
-      printf("\n%s", cudaGetErrorString(cudaGetLastError()));
+      printf("\n%s", hipGetErrorString(hipGetLastError()));
   }
 }
 
@@ -263,18 +264,18 @@ void InitProblemOnce(char *filename) {
   fscanf(fp, "%d", &Size);
 
   //   a = (float *)malloc(Size * Size * sizeof(float));
-  cudaMallocManaged(&a, Size * Size * sizeof(float));
+  hipMallocManaged(&a, Size * Size * sizeof(float));
   InitMat(a, Size, Size);
   // printf("The input matrix a is:\n");
   // PrintMat(a, Size, Size);
   //   b = (float *)malloc(Size * sizeof(float));
-  cudaMallocManaged(&b, Size * Size * sizeof(float));
+  hipMallocManaged(&b, Size * Size * sizeof(float));
   InitAry(b, Size);
   // printf("The input array b is:\n");
   // PrintAry(b, Size);
 
   //   m = (float *)malloc(Size * Size * sizeof(float));
-  cudaMallocManaged(&m, Size * Size * sizeof(float));
+  hipMallocManaged(&m, Size * Size * sizeof(float));
 }
 
 /*------------------------------------------------------
@@ -344,18 +345,18 @@ void ForwardSub() {
   //   float *m_cuda, *a_cuda, *b_cuda;
 
   // allocate memory on GPU
-  //   cudaMalloc((void **)&m_cuda, Size * Size * sizeof(float));
+  //   hipMalloc((void **)&m_cuda, Size * Size * sizeof(float));
 
-  //   cudaMalloc((void **)&a_cuda, Size * Size * sizeof(float));
+  //   hipMalloc((void **)&a_cuda, Size * Size * sizeof(float));
 
-  //   cudaMalloc((void **)&b_cuda, Size * sizeof(float));
+  //   hipMalloc((void **)&b_cuda, Size * sizeof(float));
 
   // copy memory to GPU
-  //   cudaMemcpy(m_cuda, m, Size * Size * sizeof(float),
-  //   cudaMemcpyHostToDevice);
-  //   cudaMemcpy(a_cuda, a, Size * Size * sizeof(float),
-  //   cudaMemcpyHostToDevice);
-  //   cudaMemcpy(b_cuda, b, Size * sizeof(float), cudaMemcpyHostToDevice);
+  //   hipMemcpy(m_cuda, m, Size * Size * sizeof(float),
+  //   hipMemcpyHostToDevice);
+  //   hipMemcpy(a_cuda, a, Size * Size * sizeof(float),
+  //   hipMemcpyHostToDevice);
+  //   hipMemcpy(b_cuda, b, Size * sizeof(float), hipMemcpyHostToDevice);
 
   int block_size, grid_size;
 
@@ -379,9 +380,9 @@ void ForwardSub() {
   gettimeofday(&time_start, NULL);
   for (t = 0; t < (Size - 1); t++) {
     Fan1<<<dimGrid, dimBlock>>>(m, a, Size, t);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     Fan2<<<dimGridXY, dimBlockXY>>>(m, a, b, Size, Size - t, t);
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     checkCUDAError("Fan2");
   }
   // end timing kernels
@@ -391,14 +392,14 @@ void ForwardSub() {
                     (time_start.tv_sec * 1000000 + time_start.tv_usec);
 
   // copy memory back to CPU
-  //   cudaMemcpy(m, m_cuda, Size * Size * sizeof(float),
-  //   cudaMemcpyDeviceToHost);
-  //   cudaMemcpy(a, a_cuda, Size * Size * sizeof(float),
-  //   cudaMemcpyDeviceToHost);
-  //   cudaMemcpy(b, b_cuda, Size * sizeof(float), cudaMemcpyDeviceToHost);
-  //   cudaFree(m_cuda);
-  //   cudaFree(a_cuda);
-  //   cudaFree(b_cuda);
+  //   hipMemcpy(m, m_cuda, Size * Size * sizeof(float),
+  //   hipMemcpyDeviceToHost);
+  //   hipMemcpy(a, a_cuda, Size * Size * sizeof(float),
+  //   hipMemcpyDeviceToHost);
+  //   hipMemcpy(b, b_cuda, Size * sizeof(float), hipMemcpyDeviceToHost);
+  //   hipFree(m_cuda);
+  //   hipFree(a_cuda);
+  //   hipFree(b_cuda);
 }
 
 /*------------------------------------------------------
@@ -473,9 +474,9 @@ void PrintAry(float *ary, int ary_size) {
   printf("\n\n");
 }
 void checkCUDAError(const char *msg) {
-  cudaError_t err = cudaGetLastError();
-  if (cudaSuccess != err) {
-    fprintf(stderr, "Cuda error: %s: %s.\n", msg, cudaGetErrorString(err));
+  hipError_t err = hipGetLastError();
+  if (hipSuccess != err) {
+    fprintf(stderr, "Cuda error: %s: %s.\n", msg, hipGetErrorString(err));
     exit(EXIT_FAILURE);
   }
 }
