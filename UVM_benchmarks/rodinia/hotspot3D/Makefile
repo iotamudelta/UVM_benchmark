@@ -1,27 +1,28 @@
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-CC := $(CUDA_DIR)/bin/nvcc
+HIPCC       := $(HIP_DIR)/bin/hipcc
 
-INCLUDE := $(CUDA_DIR)/include
+INCLUDE     := $(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
 
-SRC = 3D.cu
+SRC = 3D.hip
 
 EXE = 3D 
 
 OUTPUT = *.out
 
-FLAGS = -g -G #-arch sm_20 --ptxas-options=-v
+FLAGS = -g #-arch sm_20 --ptxas-options=-v
 release: $(SRC)
-	$(CC) $(KERNEL_DIM) $(FLAGS) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(FLAGS) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 enum: $(SRC)
-	$(CC) $(KERNEL_DIM) $(FLAGS) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(FLAGS) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 debug: $(SRC)
-	$(CC) $(KERNEL_DIM) $(FLAGS) -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(FLAGS) -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 debugenum: $(SRC)
-	$(CC) $(KERNEL_DIM) $(FLAGS) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(FLAGS) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 clean: $(SRC)
 	rm -f $(EXE) $(EXE).linkinfo $(OUTPUT) 

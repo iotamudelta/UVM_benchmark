@@ -19,7 +19,7 @@
 /* capacitance fitting factor	*/
 #define FACTOR_CHIP	0.5
 
-#include "opt1.cu"
+#include "opt1.hip"
 
 /* chip parameters	*/
 float t_chip = 0.0005;
@@ -185,9 +185,9 @@ int main(int argc, char** argv)
     // powerIn = (float*)calloc(size, sizeof(float));
     // tempIn = (float*)calloc(size,sizeof(float));
     // tempOut = (float*)calloc(size, sizeof(float));
-    cudaMallocManaged(&powerIn, size * sizeof(float));
-    cudaMallocManaged(&tempIn, size * sizeof(float));
-    cudaMallocManaged(&tempOut, size * sizeof(float));
+    hipMallocManaged(&powerIn, size * sizeof(float));
+    hipMallocManaged(&tempIn, size * sizeof(float));
+    hipMallocManaged(&tempOut, size * sizeof(float));
     float* answer = (float*)calloc(size, sizeof(float));
 
     readinput(powerIn,numRows, numCols, layers,pfile);
@@ -202,8 +202,8 @@ int main(int argc, char** argv)
     float acc = accuracy(tempOut,answer,numRows*numCols*layers);
     printf("Accuracy: %e\n",acc);
     writeoutput(tempOut,numRows, numCols, layers, ofile);
-    cudaFree(tempIn);
-    cudaFree(tempOut); cudaFree(powerIn);
+    hipFree(tempIn);
+    hipFree(tempOut); hipFree(powerIn);
     free(tempCopy);
     free(answer);
     return 0;
