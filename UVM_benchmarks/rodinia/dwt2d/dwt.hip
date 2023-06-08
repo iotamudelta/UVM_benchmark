@@ -79,8 +79,8 @@ int nStage2dDWT(T * in, T * out, T * backup, int pixWidth, int pixHeight, int st
     
     /* create backup of input, because each test iteration overwrites it */
     const int size = pixHeight * pixWidth * sizeof(T);
-    // cudaMemcpy(backup, in, size, cudaMemcpyDeviceToDevice);
-    cudaCheckError("Memcopy device to device");
+    // hipMemcpy(backup, in, size, hipMemcpyDeviceToDevice);
+    hipCheckError("Memcopy device to device");
     
     /* Measure time of individual levels. */
     if(forward)
@@ -94,8 +94,8 @@ int nStage2dDWT(T * in, T * out, T * backup, int pixWidth, int pixHeight, int st
     dwt_cuda::CudaDWTTester tester;
     for(int i = tester.getNumIterations(); i--; ) {
         // Recover input and measure one overall DWT run. 
-        cudaMemcpy(in, backup, size, cudaMemcpyDeviceToDevice); 
-        cudaCheckError("Memcopy device to device");
+        hipMemcpy(in, backup, size, hipMemcpyDeviceToDevice); 
+        hipCheckError("Memcopy device to device");
         tester.beginTestIteration();
         if(forward)
             fdwt(in, out, pixWidth, pixHeight, stages);
@@ -122,8 +122,8 @@ int nStage2dDWT(T * in, T * out, T * backup, int pixWidth, int pixHeight, int st
     
     // create backup of input, because each test iteration overwrites it 
     const int size = pixHeight * pixWidth * sizeof(T);
-    cudaMemcpy(backup, in, size, cudaMemcpyDeviceToDevice);
-    cudaCheckError("Memcopy device to device");
+    hipMemcpy(backup, in, size, hipMemcpyDeviceToDevice);
+    hipCheckError("Memcopy device to device");
     
     // Measure time of individual levels. 
     if(forward)
@@ -137,8 +137,8 @@ int nStage2dDWT(T * in, T * out, T * backup, int pixWidth, int pixHeight, int st
     dwt_cuda::CudaDWTTester tester;
     for(int i = tester.getNumIterations(); i--; ) {
         // Recover input and measure one overall DWT run. 
-        cudaMemcpy(in, backup, size, cudaMemcpyDeviceToDevice); 
-        cudaCheckError("Memcopy device to device");
+        hipMemcpy(in, backup, size, hipMemcpyDeviceToDevice); 
+        hipCheckError("Memcopy device to device");
         tester.beginTestIteration();
         if(forward)
             fdwt(in, out, pixWidth, pixHeight, stages, diffOut);
@@ -193,12 +193,12 @@ int writeLinear(T *component_cuda, int pixWidth, int pixHeight,
     int samplesNum = pixWidth*pixHeight;
 
     size = samplesNum*sizeof(T);
-    // cudaMallocHost((void **)&gpu_output, size);
-    // cudaCheckError("Malloc host");
+    // hipHostMalloc((void **)&gpu_output, size);
+    // hipCheckError("Malloc host");
     // memset(gpu_output, 0, size);
     result = (unsigned char *)malloc(samplesNum);
-    // cudaMemcpy(gpu_output, component_cuda, size, cudaMemcpyDeviceToHost);
-    cudaCheckError("Memcopy device to host");
+    // hipMemcpy(gpu_output, component_cuda, size, hipMemcpyDeviceToHost);
+    hipCheckError("Memcopy device to host");
 
     /* T to char */
     samplesToChar(result, component_cuda, samplesNum);
@@ -218,8 +218,8 @@ int writeLinear(T *component_cuda, int pixWidth, int pixHeight,
     close(i);
 
     /* Clean up */
-    // cudaFreeHost(gpu_output);
-    // cudaCheckError("Cuda free host memory");
+    // hipHostFree(gpu_output);
+    // hipCheckError("Cuda free host memory");
     free(result);
     if(x == 0) return 1;
     return 0;
@@ -285,14 +285,14 @@ int writeNStage2DDWT(T *component_cuda, int pixWidth, int pixHeight,
 #endif
     
     size = samplesNum*sizeof(T);
-    // cudaMallocHost((void **)&src, size);
-    // cudaCheckError("Malloc host");
+    // hipHostMalloc((void **)&src, size);
+    // hipCheckError("Malloc host");
     dst = (T*)malloc(size);
     // memset(src, 0, size);
     memset(dst, 0, size);
     result = (unsigned char *)malloc(samplesNum);
-    // cudaMemcpy(src, component_cuda, size, cudaMemcpyDeviceToHost);
-    cudaCheckError("Memcopy device to host");
+    // hipMemcpy(src, component_cuda, size, hipMemcpyDeviceToHost);
+    hipCheckError("Memcopy device to host");
 
     // LL Band
     size = bandDims[stages-1].LL.dimX * sizeof(T);
@@ -347,8 +347,8 @@ int writeNStage2DDWT(T *component_cuda, int pixWidth, int pixHeight,
     x = write(i, result, samplesNum);
     close(i);
 
-    // cudaFreeHost(src);
-    // cudaCheckError("Cuda free host memory");
+    // hipHostFree(src);
+    // hipCheckError("Cuda free host memory");
     free(dst);
     free(result);
     free(bandDims);

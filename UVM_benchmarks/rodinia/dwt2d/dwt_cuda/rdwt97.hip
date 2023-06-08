@@ -31,6 +31,7 @@
 ///
 
 
+#include "hip/hip_runtime.h"
 #include "common.h"
 #include "transform_buffer.h"
 #include "io.h"

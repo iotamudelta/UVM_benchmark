@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include "hip/hip_runtime.h"
 
 #include "common.h"
 #include "components.h"
@@ -96,45 +97,45 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
   int componentSize = d->pixWidth * d->pixHeight * sizeof(T);
 
   T *c_r_out, *backup;
-  cudaMallocManaged(&c_r_out, componentSize); //< aligned component size
-  cudaCheckError("Alloc device memory");
-  cudaMemset(c_r_out, 0, componentSize);
-  cudaCheckError("Memset device memory");
+  hipMallocManaged(&c_r_out, componentSize); //< aligned component size
+  hipCheckError("Alloc device memory");
+  hipMemset(c_r_out, 0, componentSize);
+  hipCheckError("Memset device memory");
 
-  cudaMallocManaged(&backup, componentSize); //< aligned component size
-  cudaCheckError("Alloc device memory");
-  // cudaMemset(backup, 0, componentSize);
-  cudaCheckError("Memset device memory");
+  hipMallocManaged(&backup, componentSize); //< aligned component size
+  hipCheckError("Alloc device memory");
+  // hipMemset(backup, 0, componentSize);
+  hipCheckError("Memset device memory");
 
   if (d->components == 3) {
     /* Alloc two more buffers for G and B */
     T *c_g_out, *c_b_out;
-    cudaMallocManaged(&c_g_out, componentSize); //< aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_g_out, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMallocManaged(&c_g_out, componentSize); //< aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_g_out, 0, componentSize);
+    hipCheckError("Memset device memory");
 
-    cudaMallocManaged(&c_b_out, componentSize); //< aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_b_out, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMallocManaged(&c_b_out, componentSize); //< aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_b_out, 0, componentSize);
+    hipCheckError("Memset device memory");
 
     /* Load components */
     T *c_r, *c_g, *c_b;
-    cudaMallocManaged(&c_r, componentSize); //< R, aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_r, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMallocManaged(&c_r, componentSize); //< R, aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_r, 0, componentSize);
+    hipCheckError("Memset device memory");
 
-    cudaMallocManaged(&c_g, componentSize); //< G, aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_g, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMallocManaged(&c_g, componentSize); //< G, aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_g, 0, componentSize);
+    hipCheckError("Memset device memory");
 
-    cudaMallocManaged(&c_b, componentSize); //< B, aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_b, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMallocManaged(&c_b, componentSize); //< B, aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_b, 0, componentSize);
+    hipCheckError("Memset device memory");
 
     rgbToComponents(c_r, c_g, c_b, d->srcImg, d->pixWidth, d->pixHeight);
 
@@ -149,7 +150,7 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
 
 // -------test----------
 // T *h_r_out=(T*)malloc(componentSize);
-// cudaMemcpy(h_r_out, c_g_out, componentSize, cudaMemcpyDeviceToHost);
+// hipMemcpy(h_r_out, c_g_out, componentSize, hipMemcpyDeviceToHost);
 // int ii;
 // for(ii=0;ii<componentSize/sizeof(T);ii++) {
 // fprintf(stderr, "%d ", h_r_out[ii]);
@@ -173,24 +174,24 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
     }
 #endif
 
-    cudaFree(c_r);
-    cudaCheckError("Cuda free");
-    cudaFree(c_g);
-    cudaCheckError("Cuda free");
-    cudaFree(c_b);
-    cudaCheckError("Cuda free");
-    cudaFree(c_g_out);
-    cudaCheckError("Cuda free");
-    cudaFree(c_b_out);
-    cudaCheckError("Cuda free");
+    hipFree(c_r);
+    hipCheckError("Cuda free");
+    hipFree(c_g);
+    hipCheckError("Cuda free");
+    hipFree(c_b);
+    hipCheckError("Cuda free");
+    hipFree(c_g_out);
+    hipCheckError("Cuda free");
+    hipFree(c_b_out);
+    hipCheckError("Cuda free");
 
   } else if (d->components == 1) {
     // Load component
     T *c_r;
-    cudaMalloc((void **)&(c_r), componentSize); //< R, aligned component size
-    cudaCheckError("Alloc device memory");
-    cudaMemset(c_r, 0, componentSize);
-    cudaCheckError("Memset device memory");
+    hipMalloc((void **)&(c_r), componentSize); //< R, aligned component size
+    hipCheckError("Alloc device memory");
+    hipMemset(c_r, 0, componentSize);
+    hipCheckError("Memset device memory");
 
     bwToComponent(c_r, d->srcImg, d->pixWidth, d->pixHeight);
 
@@ -208,14 +209,14 @@ void processDWT(struct dwt *d, int forward, int writeVisual) {
                   ".lin.out");
     }
     // #endif
-    cudaFree(c_r);
-    cudaCheckError("Cuda free");
+    hipFree(c_r);
+    hipCheckError("Cuda free");
   }
 
-  cudaFree(c_r_out);
-  cudaCheckError("Cuda free device");
-  cudaFree(backup);
-  cudaCheckError("Cuda free device");
+  hipFree(c_r_out);
+  hipCheckError("Cuda free device");
+  hipFree(backup);
+  hipCheckError("Cuda free device");
 }
 
 int main(int argc, char **argv) {
@@ -319,8 +320,8 @@ int main(int argc, char **argv) {
 
   // device init
   int devCount;
-  cudaGetDeviceCount(&devCount);
-  cudaCheckError("Get device count");
+  hipGetDeviceCount(&devCount);
+  hipCheckError("Get device count");
   if (devCount == 0) {
     printf("No CUDA enabled device\n");
     return -1;
@@ -331,16 +332,16 @@ int main(int argc, char **argv) {
            device, 0, devCount - 1);
     return -1;
   }
-  cudaDeviceProp devProp;
-  cudaGetDeviceProperties(&devProp, device);
-  cudaCheckError("Get device properties");
+  hipDeviceProp_t devProp;
+  hipGetDeviceProperties(&devProp, device);
+  hipCheckError("Get device properties");
   if (devProp.major < 1) {
     printf("Device %d does not support CUDA\n", device);
     return -1;
   }
   printf("Using device %d: %s\n", device, devProp.name);
-  cudaSetDevice(device);
-  cudaCheckError("Set selected device");
+  hipSetDevice(device);
+  hipCheckError("Set selected device");
 
   struct dwt *d;
   d = (struct dwt *)malloc(sizeof(struct dwt));
@@ -375,8 +376,8 @@ int main(int argc, char **argv) {
       pixWidth * pixHeight * compCount; //<amount of data (in bytes) to proccess
 
   // load img source image
-  cudaMallocManaged(&d->srcImg, inputSize);
-  cudaCheckError("Alloc host memory");
+  hipMallocManaged(&d->srcImg, inputSize);
+  hipCheckError("Alloc host memory");
   if (getImg(d->srcFilename, d->srcImg, inputSize) == -1)
     return -1;
 
@@ -397,8 +398,8 @@ int main(int argc, char **argv) {
   // writeComponent(g_wave_cuda, 512000, ".g");
   // writeComponent(g_cuda, componentSize, ".g");
   // writeComponent(b_wave_cuda, componentSize, ".b");
-  cudaFree(d->srcImg);
-  cudaCheckError("Cuda free host");
+  hipFree(d->srcImg);
+  hipCheckError("Cuda free host");
 
   return 0;
 }

@@ -37,7 +37,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <vector>
-
+#include "hip/hip_runtime.h"
 
 
 // compile time minimum macro
@@ -142,8 +142,8 @@ namespace dwt_cuda {
   class CudaDWTTester {
   private:
     static bool testRunning;    ///< true if any test is currently running
-    cudaEvent_t beginEvent;     ///< begin CUDA event
-    cudaEvent_t endEvent;       ///< end CUDA event
+    hipEvent_t beginEvent;      ///< begin CUDA event
+    hipEvent_t endEvent;        ///< end CUDA event
     std::vector<float> times;   ///< collected times
     const bool disabled;        ///< true if this object is disabled
   public:
@@ -151,10 +151,10 @@ namespace dwt_cuda {
     /// @param status   return code to be checked
     /// @param message  message to be shown if there was an error
     /// @return true if there was no error, false otherwise
-    static bool check(const cudaError_t & status, const char * message) {
+    static bool check(const hipError_t & status, const char * message) {
       #if defined(GPU_DWT_TESTING)
-      if((!testRunning) && status != cudaSuccess) {
-        const char * errorString = cudaGetErrorString(status);
+      if((!testRunning) && status != hipSuccess) {
+        const char * errorString = hipGetErrorString(status);
         fprintf(stderr, "CUDA ERROR: '%s': %s\n", message, errorString);
         fflush(stderr);
         return false;
@@ -168,7 +168,7 @@ namespace dwt_cuda {
     /// @return true if there was no error, false otherwise
     static bool checkLastKernelCall(const char * message) {
       #if defined(GPU_DWT_TESTING)
-      return testRunning ? true : check(cudaThreadSynchronize(), message);
+      return testRunning ? true : check(hipDeviceSynchronize(), message);
       #else // GPU_DWT_TESTING
       return true;
       #endif // GPU_DWT_TESTING
@@ -185,9 +185,9 @@ namespace dwt_cuda {
     /// Starts one test iteration.
     void beginTestIteration() {
       if(!disabled) {
-        cudaEventCreate(&beginEvent);
-        cudaEventCreate(&endEvent);
-        cudaEventRecord(beginEvent, 0);
+        hipEventCreate(&beginEvent);
+        hipEventCreate(&endEvent);
+        hipEventRecord(beginEvent, 0);
         testRunning = true;
       }
     }
@@ -197,11 +197,11 @@ namespace dwt_cuda {
       if(!disabled) {
         float time;
         testRunning = false;
-        cudaEventRecord(endEvent, 0);
-        cudaEventSynchronize(endEvent);
-        cudaEventElapsedTime(&time, beginEvent, endEvent);
-        cudaEventDestroy(beginEvent);
-        cudaEventDestroy(endEvent);
+        hipEventRecord(endEvent, 0);
+        hipEventSynchronize(endEvent);
+        hipEventElapsedTime(&time, beginEvent, endEvent);
+        hipEventDestroy(beginEvent);
+        hipEventDestroy(endEvent);
         times.push_back(time);
       }
     }
@@ -229,7 +229,7 @@ namespace dwt_cuda {
   
   
   
-  /// Simple cudaMemcpy wrapped in performance tester.
+  /// Simple hipMemcpy wrapped in performance tester.
   /// @param dest  destination bufer
   /// @param src   source buffer
   /// @param sx    width of copied image
@@ -237,9 +237,9 @@ namespace dwt_cuda {
   template <typename T>
   inline void memCopy(T * const dest, const T * const src,
                       const size_t sx, const size_t sy) {
-    cudaError_t status;
+    hipError_t status;
     PERF_BEGIN
-    status = cudaMemcpy(dest, src, sx*sy*sizeof(T), cudaMemcpyDeviceToDevice);
+    status = hipMemcpy(dest, src, sx*sy*sizeof(T), hipMemcpyDeviceToDevice);
     PERF_END("        memcpy", sx, sy)
     CudaDWTTester::check(status, "memcpy device > device");
   }

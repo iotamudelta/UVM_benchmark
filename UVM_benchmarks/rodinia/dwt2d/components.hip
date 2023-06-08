@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "hip/hip_runtime.h"
 
 #include "common.h"
 #include "components.h"
@@ -130,11 +131,11 @@ void rgbToComponents(T *d_r, T *d_g, T *d_b, unsigned char *src, int width,
                     3; // aligned to thread block size -- THREADS
 
   /* Alloc d_src buffer */
-  //   cudaMalloc((void **)&d_src, alignedSize);
-  //   cudaCheckAsyncError("Cuda malloc") cudaMemset(d_src, 0, alignedSize);
+  //   hipMalloc((void **)&d_src, alignedSize);
+  //   cudaCheckAsyncError("Cuda malloc") hipMemset(d_src, 0, alignedSize);
 
   /* Copy data to device */
-  // cudaMemcpy(d_src, src, pixels*3, cudaMemcpyHostToDevice);
+  // hipMemcpy(d_src, src, pixels*3, hipMemcpyHostToDevice);
   //   cudaCheckError("Copy data to device")
 
   /* Kernel */
@@ -145,7 +146,7 @@ void rgbToComponents(T *d_r, T *d_g, T *d_b, unsigned char *src, int width,
   cudaCheckAsyncError("CopySrcToComponents kernel")
 
   /* Free Memory */
-  //   cudaFree(d_src);
+  //   hipFree(d_src);
   //   cudaCheckAsyncError("Free memory")
 }
 template void rgbToComponents<float>(float *d_r, float *d_g, float *d_b,
@@ -162,11 +163,11 @@ void bwToComponent(T *d_c, unsigned char *src, int width, int height) {
                     THREADS; // aligned to thread block size -- THREADS
 
   /* Alloc d_src buffer */
-  //   cudaMalloc((void **)&d_src, alignedSize);
-  //   cudaCheckAsyncError("Cuda malloc") cudaMemset(d_src, 0, alignedSize);
+  //   hipMalloc((void **)&d_src, alignedSize);
+  //   cudaCheckAsyncError("Cuda malloc") hipMemset(d_src, 0, alignedSize);
 
   //   /* Copy data to device */
-  //   cudaMemcpy(d_src, src, pixels, cudaMemcpyHostToDevice);
+  //   hipMemcpy(d_src, src, pixels, hipMemcpyHostToDevice);
   //   cudaCheckError("Copy data to device")
 
   /* Kernel */
@@ -177,7 +178,7 @@ void bwToComponent(T *d_c, unsigned char *src, int width, int height) {
   cudaCheckAsyncError("CopySrcToComponent kernel")
 
   /* Free Memory */
-  //   cudaFree(d_src);
+  //   hipFree(d_src);
   //   cudaCheckAsyncError("Free memory")
 }
 

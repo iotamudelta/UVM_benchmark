@@ -29,6 +29,7 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
+#include "hip/hip_runtime.h"
 #include "common.h"
 #include "io.h"
 #include "transform_buffer.h"
