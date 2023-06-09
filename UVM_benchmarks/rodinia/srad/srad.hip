@@ -6,7 +6,7 @@
 #include "srad.h"
 
 // includes, project
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 // includes, kernels
 #include "srad_kernel.cu"
@@ -128,12 +128,12 @@ runTest( int argc, char** argv)
 #ifdef GPU
 
 	//Allocate device memory
-    cudaMallocManaged(& J_cuda, sizeof(float)* size_I);
-    cudaMallocManaged(& C_cuda, sizeof(float)* size_I);
-	cudaMallocManaged(& E_C, 	sizeof(float)* size_I);
-	cudaMallocManaged(& W_C, 	sizeof(float)* size_I);
-	cudaMallocManaged(& S_C, 	sizeof(float)* size_I);
-	cudaMallocManaged(& N_C, 	sizeof(float)* size_I);
+    hipMallocManaged(& J_cuda, sizeof(float)* size_I);
+    hipMallocManaged(& C_cuda, sizeof(float)* size_I);
+	hipMallocManaged(& E_C, 	sizeof(float)* size_I);
+	hipMallocManaged(& W_C, 	sizeof(float)* size_I);
+	hipMallocManaged(& S_C, 	sizeof(float)* size_I);
+	hipMallocManaged(& N_C, 	sizeof(float)* size_I);
 
 	
 #endif 
@@ -224,19 +224,19 @@ runTest( int argc, char** argv)
     
 
 	//Copy data from main memory to device memory
-	// cudaMemcpy(J_cuda, J, sizeof(float) * size_I, cudaMemcpyHostToDevice);
+	// hipMemcpy(J_cuda, J, sizeof(float) * size_I, hipMemcpyHostToDevice);
 
 	//Run kernels
 	srad_cuda_1<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_cuda, C_cuda, cols, rows, q0sqr); 
 	srad_cuda_2<<<dimGrid, dimBlock>>>(E_C, W_C, N_C, S_C, J_cuda, C_cuda, cols, rows, lambda, q0sqr); 
 
 	//Copy data from device memory to main memory
-    // cudaMemcpy(J, J_cuda, sizeof(float) * size_I, cudaMemcpyDeviceToHost);
+    // hipMemcpy(J, J_cuda, sizeof(float) * size_I, hipMemcpyDeviceToHost);
 
 #endif   
 }
 
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
 
 #ifdef OUTPUT
     //Printing output	
@@ -258,12 +258,12 @@ runTest( int argc, char** argv)
     free(dN); free(dS); free(dW); free(dE);
 #endif
 #ifdef GPU
-    cudaFree(C_cuda);
-	cudaFree(J_cuda);
-	cudaFree(E_C);
-	cudaFree(W_C);
-	cudaFree(N_C);
-	cudaFree(S_C);
+    hipFree(C_cuda);
+	hipFree(J_cuda);
+	hipFree(E_C);
+	hipFree(W_C);
+	hipFree(N_C);
+	hipFree(S_C);
 #endif 
 	free(c);
   
