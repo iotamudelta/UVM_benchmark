@@ -1,24 +1,26 @@
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-CC := $(CUDA_DIR)/bin/nvcc
-INCLUDE := $(CUDA_DIR)/include
+HIPCC       := $(HIP_DIR)/bin/hipcc
+
+INCLUDE     := $(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
 # DEF := -DPREF
 
-SRC = pathfinder.cu
+SRC = pathfinder.hip
 
 EXE = pathfinder
 
 release:
-	$(CC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) $(DEF)
+	$(HIPCC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) $(DEF)
 
 enum:
-	$(CC) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$$(CUDA_LIB_DIR) 
+	$(HIPCC) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$$(HIP_LIB_DIR) 
 
 debug:
-	$(CC) -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$$(CUDA_LIB_DIR) 
+	$(HIPCC) -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$$(HIP_LIB_DIR) 
 
 debugenum:
-	$(CC) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 clean:
 	rm -f pathfinder

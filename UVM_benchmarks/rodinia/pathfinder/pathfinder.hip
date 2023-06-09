@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
+#include "hip/hip_runtime.h"
 
 #define BLOCK_SIZE 256
 #define STR_SIZE 256
@@ -189,20 +190,20 @@ int calc_path(int *gpuWall, int *gpuResult[2], int rows, int cols, \
 	 int pyramid_height, int blockCols, int borderCols)
 {
     #ifdef PREF
-    cudaStream_t stream1;
-	cudaStream_t stream2;
-    cudaStream_t stream3;
-    cudaStream_t stream4;
-	cudaStreamCreate(&stream1);
-	cudaStreamCreate(&stream2);
-    cudaStreamCreate(&stream3);
-    cudaStreamCreate(&stream4);
-	cudaMemPrefetchAsync(gpuWall,(rows*cols - cols)*sizeof(int), 0, stream1 );
-	cudaMemPrefetchAsync(gpuResult[0],sizeof(int)*cols, 0, stream2 );
-	cudaMemPrefetchAsync(gpuResult[1],sizeof(int)*cols, 0, stream3 );
-	cudaStreamSynchronize(stream1);
-	cudaStreamSynchronize(stream2);
-	cudaStreamSynchronize(stream3);
+    hipStream_t stream1;
+	hipStream_t stream2;
+    hipStream_t stream3;
+    hipStream_t stream4;
+	hipStreamCreate(&stream1);
+	hipStreamCreate(&stream2);
+    hipStreamCreate(&stream3);
+    hipStreamCreate(&stream4);
+	hipMemPrefetchAsync(gpuWall,(rows*cols - cols)*sizeof(int), 0, stream1 );
+	hipMemPrefetchAsync(gpuResult[0],sizeof(int)*cols, 0, stream2 );
+	hipMemPrefetchAsync(gpuResult[1],sizeof(int)*cols, 0, stream3 );
+	hipStreamSynchronize(stream1);
+	hipStreamSynchronize(stream2);
+	hipStreamSynchronize(stream3);
 
 
 
@@ -242,8 +243,8 @@ int calc_path(int *gpuWall, int *gpuResult[2], int rows, int cols, \
 int main(int argc, char** argv)
 {
     int num_devices;
-    cudaGetDeviceCount(&num_devices);
-    if (num_devices > 1) cudaSetDevice(DEVICE);
+    hipGetDeviceCount(&num_devices);
+    if (num_devices > 1) hipSetDevice(DEVICE);
     run(argc,argv);
     return EXIT_SUCCESS;
 }
@@ -263,15 +264,15 @@ void run(int argc, char** argv)
     int *gpuWall, *gpuResult[2];
     int size = rows*cols;
 
-    // cudaMalloc((void**)&gpuResult[0], sizeof(int)*cols);
-    // cudaMalloc((void**)&gpuResult[1], sizeof(int)*cols);
-    cudaMallocManaged(&gpuResult[0], sizeof(int)*cols);
-    cudaMallocManaged(&gpuResult[1], sizeof(int)*cols);
-    // cudaMemcpy(gpuResult[0], data, sizeof(int)*cols, cudaMemcpyHostToDevice);
+    // hipMalloc((void**)&gpuResult[0], sizeof(int)*cols);
+    // hipMalloc((void**)&gpuResult[1], sizeof(int)*cols);
+    hipMallocManaged(&gpuResult[0], sizeof(int)*cols);
+    hipMallocManaged(&gpuResult[1], sizeof(int)*cols);
+    // hipMemcpy(gpuResult[0], data, sizeof(int)*cols, hipMemcpyHostToDevice);
     memcpy(gpuResult[0], data, sizeof(int)*cols);
-    // cudaMalloc((void**)&gpuWall, sizeof(int)*(size-cols));
-    cudaMallocManaged(&gpuWall, sizeof(int)*(size-cols));
-    // cudaMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), cudaMemcpyHostToDevice);
+    // hipMalloc((void**)&gpuWall, sizeof(int)*(size-cols));
+    hipMallocManaged(&gpuWall, sizeof(int)*(size-cols));
+    // hipMemcpy(gpuWall, data+cols, sizeof(int)*(size-cols), hipMemcpyHostToDevice);
     memcpy(gpuWall, data+cols, sizeof(int)*(size-cols));
 
     int final_ret;
@@ -279,7 +280,7 @@ void run(int argc, char** argv)
      final_ret = calc_path(gpuWall, gpuResult, rows, cols, \
 	 pyramid_height, blockCols, borderCols);
 
-    // cudaMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, cudaMemcpyDeviceToHost);
+    // hipMemcpy(result, gpuResult[final_ret], sizeof(int)*cols, hipMemcpyDeviceToHost);
 
 
 #ifdef BENCH_PRINT
@@ -298,9 +299,9 @@ void run(int argc, char** argv)
 #endif
 
 
-    cudaFree(gpuWall);
-    cudaFree(gpuResult[0]);
-    cudaFree(gpuResult[1]);
+    hipFree(gpuWall);
+    hipFree(gpuResult[0]);
+    hipFree(gpuResult[1]);
 
     delete [] data;
     delete [] wall;
