@@ -1,9 +1,9 @@
 /************************************************
-	streamcluster_cuda_header.cu
+	streamcluster_hip_header.hip
 	: header file to streamcluster
 	
 	- original code from PARSEC Benchmark Suite
-	- parallelization with CUDA API has been applied by
+	- parallelization with HIP API has been applied by
 	
 	Sang-Ha (a.k.a Shawn) Lee - sl4ge@virginia.edu
 	University of Virginia
@@ -12,8 +12,8 @@
 	
 ***********************************************/
 
-#ifndef STREAMCLUSTER_CUDA_HEADER_CU
-#define STREAMCLUSTER_CUDA_HEADER_CU
+#ifndef STREAMCLUSTER_HIP_HEADER_HIP
+#define STREAMCLUSTER_HIP_HEADER_HIP
 
 #include <stdio.h>
 #include <iostream>
@@ -26,7 +26,7 @@
 #include <sys/resource.h>
 #include <limits.h>
 
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #ifdef ENABLE_PARSEC_HOOKS
 #include <hooks.h>

@@ -1,9 +1,9 @@
 /***********************************************
-	streamcluster_cuda.cu
+	streamcluster_hip.hip
 	: parallelized code of streamcluster
 	
 	- original code from PARSEC Benchmark Suite
-	- parallelization with CUDA API has been applied by
+	- parallelization with HIP API has been applied by
 	
 	Shawn Sang-Ha Lee - sl4ge@virginia.edu
 	University of Virginia
@@ -11,16 +11,17 @@
 	Department of Computer Science
 	
 ***********************************************/
-#include "streamcluster_header.cu"
+#include "hip/hip_runtime.h"
+#include "streamcluster_header.hip"
 
 using namespace std;
 
-// AUTO-ERROR CHECK FOR ALL CUDA FUNCTIONS
+// AUTO-ERROR CHECK FOR ALL HIP FUNCTIONS
 #define CUDA_SAFE_CALL( call) do {										\
-   cudaError err = call;												\
-   if( cudaSuccess != err) {											\
-       fprintf(stderr, "Cuda error in file '%s' in line %i : %s.\n",	\
-               __FILE__, __LINE__, cudaGetErrorString( err) );			\
+   hipError_t err = call;												\
+   if( hipSuccess != err) {												\
+       fprintf(stderr, "HIP error in file '%s' in line %i : %s.\n",	\
+               __FILE__, __LINE__, hipGetErrorString( err) );			\
    exit(EXIT_FAILURE);													\
    } } while (0)
 
@@ -93,10 +94,10 @@ kernel_compute_cost(int num, int dim, long x, Point *p, int K, int stride,
 //=======================================
 void allocDevMem(int num, int dim)
 {
-	// CUDA_SAFE_CALL( cudaMallocManaged( &center_table_d,	  num * sizeof(int))   );
-	CUDA_SAFE_CALL( cudaMallocManaged( &switch_membership_d, num * sizeof(bool))  );
-	// CUDA_SAFE_CALL( cudaMallocManaged( &p,					  num * sizeof(Point)) );
-	CUDA_SAFE_CALL( cudaMallocManaged( &coord_d,		num * dim * sizeof(float)) );
+	// CUDA_SAFE_CALL( hipMallocManaged( &center_table_d,	  num * sizeof(int))   );
+	CUDA_SAFE_CALL( hipMallocManaged( &switch_membership_d, num * sizeof(bool))  );
+	// CUDA_SAFE_CALL( hipMallocManaged( &p,					  num * sizeof(Point)) );
+	CUDA_SAFE_CALL( hipMallocManaged( &coord_d,		num * dim * sizeof(float)) );
 }
 
 //=======================================
@@ -112,10 +113,10 @@ void allocHostMem(int num, int dim)
 //=======================================
 void freeDevMem()
 {
-	// CUDA_SAFE_CALL( cudaFree(center_table_d)	  );
-	CUDA_SAFE_CALL( cudaFree(switch_membership_d) );
-	// CUDA_SAFE_CALL( cudaFree(p)					  );
-	CUDA_SAFE_CALL( cudaFree(coord_d)			  );
+	// CUDA_SAFE_CALL( hipFree(center_table_d)	  );
+	CUDA_SAFE_CALL( hipFree(switch_membership_d) );
+	// CUDA_SAFE_CALL( hipFree(p)					  );
+	CUDA_SAFE_CALL( hipFree(coord_d)			  );
 }
 
 //=======================================
@@ -134,14 +135,14 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 {	
 #ifdef CUDATIME
 	float tmp_t;
-	cudaEvent_t start, stop;
-	cudaEventCreate(&start);
-	cudaEventCreate(&stop);
+	hipEvent_t start, stop;
+	hipEventCreate(&start);
+	hipEventCreate(&stop);
 	
-	cudaEventRecord(start, 0);
+	hipEventRecord(start, 0);
 #endif
 
-	cudaError_t error;
+	hipError_t error;
 	
 	int stride	= *numcenters + 1;			// size of each work_mem segment
 	int K		= *numcenters ;				// number of centers
@@ -199,28 +200,28 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
   	#endif
 
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*serial_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 
 	//=======================================
 	// ALLOCATE GPU MEMORY
 	//=======================================
-	CUDA_SAFE_CALL( cudaMallocManaged( &work_mem_d,  stride * (nThread + 1) * sizeof(float)) );
+	CUDA_SAFE_CALL( hipMallocManaged( &work_mem_d,  stride * (nThread + 1) * sizeof(float)) );
 	// Only on the first iteration
 
 	
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*alloc_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 
 	//=======================================
@@ -229,23 +230,23 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	// Only if first iteration OR coord has changed
 	// if(isCoordChanged || iter == 0)
 	// {
-	// 	CUDA_SAFE_CALL( cudaMemcpy(coord_d,  coord_h,	 num * dim * sizeof(float), cudaMemcpyHostToDevice) );
+	// 	CUDA_SAFE_CALL( hipMemcpy(coord_d,  coord_h,	 num * dim * sizeof(float), hipMemcpyHostToDevice) );
 	// }
-	// CUDA_SAFE_CALL( cudaMemcpy(center_table_d,  center_table,  num * sizeof(int),   cudaMemcpyHostToDevice) );
-	// CUDA_SAFE_CALL( cudaMemcpy(p,  points->p,				   num * sizeof(Point), cudaMemcpyHostToDevice) );
+	// CUDA_SAFE_CALL( hipMemcpy(center_table_d,  center_table,  num * sizeof(int),   hipMemcpyHostToDevice) );
+	// CUDA_SAFE_CALL( hipMemcpy(p,  points->p,				   num * sizeof(Point), hipMemcpyHostToDevice) );
 	
-	CUDA_SAFE_CALL( cudaMemset((void*) switch_membership_d, 0,			num * sizeof(bool))  );
-	CUDA_SAFE_CALL( cudaMemset((void*) work_mem_d,  		0, stride * (nThread + 1) * sizeof(float)) );
+	CUDA_SAFE_CALL( hipMemset((void*) switch_membership_d, 0,			num * sizeof(bool))  );
+	CUDA_SAFE_CALL( hipMemset((void*) work_mem_d,  		0, stride * (nThread + 1) * sizeof(float)) );
 	#ifdef PRINTINFO
 	fprintf(stderr, "test_5\n");
 	#endif
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*cpu_to_gpu_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 	
 	//=======================================
@@ -269,40 +270,40 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 															center_table_d,			// in:	center index table
 															switch_membership_d		// out:  changes in membership
 															);
-	cudaDeviceSynchronize();
+	hipDeviceSynchronize();
 	#ifdef PRINTINFO
 	fprintf(stderr, "test_6\n");
 	#endif
 	// error check
-	error = cudaGetLastError();
-	if (error != cudaSuccess)
+	error = hipGetLastError();
+	if (error != hipSuccess)
 	{
-		printf("kernel error: %s\n", cudaGetErrorString(error));
+		printf("kernel error: %s\n", hipGetErrorString(error));
 		exit(EXIT_FAILURE);
 	}
 	
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*kernel_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 	
 	//=======================================
 	// GPU-TO-CPU MEMORY COPY
 	//=======================================
-	// CUDA_SAFE_CALL( cudaMemcpy(work_mem_h, 		  work_mem_d, 	stride * (nThread + 1) * sizeof(float), cudaMemcpyDeviceToHost) );
-	// CUDA_SAFE_CALL( cudaMemcpy(switch_membership, switch_membership_d,	 num * sizeof(bool),  cudaMemcpyDeviceToHost) );
+	// CUDA_SAFE_CALL( hipMemcpy(work_mem_h, 		  work_mem_d, 	stride * (nThread + 1) * sizeof(float), hipMemcpyDeviceToHost) );
+	// CUDA_SAFE_CALL( hipMemcpy(switch_membership, switch_membership_d,	 num * sizeof(bool),  hipMemcpyDeviceToHost) );
 	
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*gpu_to_cpu_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 	
 	//=======================================
@@ -380,24 +381,24 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	
 	
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*serial_t += (double) tmp_t;
 	
-	cudaEventRecord(start,0);
+	hipEventRecord(start,0);
 #endif
 
 	//=======================================
 	// DEALLOCATE GPU MEMORY
 	//=======================================
-	CUDA_SAFE_CALL( cudaFree(work_mem_d) );
+	CUDA_SAFE_CALL( hipFree(work_mem_d) );
 	
 	
 #ifdef CUDATIME
-	cudaEventRecord(stop,0);
-	cudaEventSynchronize(stop);
-	cudaEventElapsedTime(&tmp_t, start, stop);
+	hipEventRecord(stop,0);
+	hipEventSynchronize(stop);
+	hipEventElapsedTime(&tmp_t, start, stop);
 	*free_t += (double) tmp_t;
 #endif
 	iter++;

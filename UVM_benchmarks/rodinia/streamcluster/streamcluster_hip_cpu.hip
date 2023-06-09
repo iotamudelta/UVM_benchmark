@@ -4,7 +4,7 @@
 		modification regarding function calls
 	
 	- original code from PARSEC Benchmark Suite
-	- parallelization with CUDA API has been applied by
+	- parallelization with HIP API has been applied by
 	
 	Sang-Ha (a.k.a Shawn) Lee - sl4ge@virginia.edu
 	University of Virginia
@@ -13,7 +13,7 @@
 	
 ***********************************************/
 
-#include "streamcluster_header.cu"
+#include "streamcluster_header.hip"
 
 using namespace std;
 
@@ -775,7 +775,7 @@ void streamCluster( PStream* stream,
   points.dim = dim;
   points.num = chunksize;
   // points.p = (Point *)malloc(chunksize*sizeof(Point));
-  cudaMallocManaged(&points.p, chunksize*sizeof(Point));
+  hipMallocManaged(&points.p, chunksize*sizeof(Point));
   for( int i = 0; i < chunksize; i++ ) {
     points.p[i].coord = &block[i*dim];		
   }
@@ -811,7 +811,7 @@ void streamCluster( PStream* stream,
     switch_membership = (bool*)malloc(points.num*sizeof(bool));
     is_center = (bool*)calloc(points.num,sizeof(bool));
     // center_table = (int*)malloc(points.num*sizeof(int));
-    cudaMallocManaged(&center_table, points.num*sizeof(int));
+    hipMallocManaged(&center_table, points.num*sizeof(int));
     localSearch(&points,kmin, kmax,&kfinal);
 	
     fprintf(stderr,"finish local search\n");
@@ -838,7 +838,7 @@ void streamCluster( PStream* stream,
 	
     free(is_center);
     free(switch_membership);
-    cudaFree(center_table);
+    hipFree(center_table);
 	
     if( stream->feof() ) {
       break;
@@ -849,11 +849,11 @@ void streamCluster( PStream* stream,
   switch_membership = (bool*)malloc(centers.num*sizeof(bool));
   is_center = (bool*)calloc(centers.num,sizeof(bool));
   // center_table = (int*)malloc(centers.num*sizeof(int));
-  cudaMallocManaged(&center_table, centers.num*sizeof(int));
+  hipMallocManaged(&center_table, centers.num*sizeof(int));
   localSearch( &centers, kmin, kmax ,&kfinal );
   contcenters(&centers);
   outcenterIDs( &centers, centerIDs, outfile);
-  cudaFree(center_table);
+  hipFree(center_table);
 }
 
 int main(int argc, char **argv)
@@ -949,7 +949,7 @@ int main(int argc, char **argv)
   printf("time pshuffle = %lfs\n", time_shuffle);
   printf("time localSearch = %lfs\n", time_local_search);
   printf("\n\n");
-  printf("====CUDA Timing info (pgain)====\n");
+  printf("====HIP Timing info (pgain)====\n");
   printf("time serial = %lfs\n", serial_t/1000);
   printf("time CPU to GPU memory copy = %lfs\n", cpu_to_gpu_t/1000);
   printf("time GPU to CPU memory copy back = %lfs\n", gpu_to_cpu_t/1000);

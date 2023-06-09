@@ -1,32 +1,34 @@
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-NVCC = $(CUDA_DIR)/bin/nvcc
+HIPCC       := $(HIP_DIR)/bin/hipcc
 
-NVCC_FLAGS = -I$(CUDA_DIR)/include
+HIP_FLAGS   := -I$(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
+
 
 TARGET_G = sc_gpu
 
 
 # make dbg=1 tells nvcc to add debugging symbols to the binary
 ifeq ($(dbg),1)
-	NVCC_FLAGS += -g -O0 -DPRINTINFO
+	HIP_FLAGS += -g -O0 -DPRINTINFO
 else
-	NVCC_FLAGS += -O3 
+	HIP_FLAGS += -O3 
 endif
 
-# make emu=1 compiles the CUDA kernels for emulation
+# make emu=1 compiles the HIP kernels for emulation
 ifeq ($(emu),1)
-	NVCC_FLAGS += -deviceemu
+	HIP_FLAGS += -deviceemu
 endif
 
-# make dp=1 compiles the CUDA kernels with double-precision support
+# make dp=1 compiles the HIP kernels with double-precision support
 ifeq ($(dp),1)
-	NVCC_FLAGS += --gpu-name sm_60
+	HIP_FLAGS += --gpu-name sm_60
 endif
 
 
-$(TARGET_G): streamcluster_cuda_cpu.cu streamcluster_cuda.cu streamcluster_header.cu
-	$(NVCC) $(NVCC_FLAGS) streamcluster_cuda_cpu.cu streamcluster_cuda.cu streamcluster_header.cu -o $(TARGET_G) -lcuda
+$(TARGET_G): streamcluster_hip_cpu.hip streamcluster_hip.hip streamcluster_header.hip
+	$(HIPCC) $(HIP_FLAGS) streamcluster_hip_cpu.hip streamcluster_hip.hip streamcluster_header.hip -o $(TARGET_G)
 	
 
 clean:
