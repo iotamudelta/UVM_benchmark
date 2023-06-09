@@ -9,7 +9,7 @@
 #include <hip/hip_runtime.h>
 
 // includes, kernels
-#include "srad_kernel.cu"
+#include "srad_kernel.hip"
 
 void random_matrix(float *I, int rows, int cols);
 void runTest( int argc, char** argv);
