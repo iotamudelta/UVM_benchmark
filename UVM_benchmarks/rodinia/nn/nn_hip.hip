@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <float.h>
 #include <vector>
-#include "cuda.h"
+#include "hip/hip_runtime.h"
 
 #define min( a, b )			a > b ? b : a
 #define ceilDiv( a, b )		( a + b - 1 ) / b
@@ -94,15 +94,15 @@ int main(int argc, char* argv[])
 
 
 	// Scaling calculations - added by Sam Kauffman
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties( &deviceProp, 0 );
-	cudaDeviceSynchronize();
+	hipDeviceProp_t deviceProp;
+	hipGetDeviceProperties( &deviceProp, 0 );
+	hipDeviceSynchronize();
 	unsigned long maxGridX = deviceProp.maxGridSize[0];
 	unsigned long threadsPerBlock = min( deviceProp.maxThreadsPerBlock, DEFAULT_THREADS_PER_BLOCK );
 	size_t totalDeviceMemory;
 	size_t freeDeviceMemory;
-	cudaMemGetInfo(  &freeDeviceMemory, &totalDeviceMemory );
-	cudaDeviceSynchronize();
+	hipMemGetInfo(  &freeDeviceMemory, &totalDeviceMemory );
+	hipDeviceSynchronize();
 	unsigned long usableDeviceMemory = freeDeviceMemory * 85 / 100; // 85% arbitrary throttle to compensate for known CUDA bug
 	unsigned long maxThreads = usableDeviceMemory / 12; // 4 bytes in 3 vectors per thread
 	if ( numRecords > maxThreads )
@@ -134,24 +134,24 @@ int main(int argc, char* argv[])
 	* Allocate memory on host and device
 	*/
 	// distances = (float *)malloc(sizeof(float) * numRecords);
-	cudaMallocManaged(&d_locations,sizeof(LatLong) * numRecords);
-	cudaMallocManaged(&d_distances,sizeof(float) * numRecords);
+	hipMallocManaged(&d_locations,sizeof(LatLong) * numRecords);
+	hipMallocManaged(&d_distances,sizeof(float) * numRecords);
 
   memcpy(d_locations, &locations[0], sizeof(LatLong)*numRecords);
 
   /**
   * Transfer data from host to device
   */
-  // cudaMemcpy( d_locations, &locations[0], sizeof(LatLong) * numRecords, cudaMemcpyHostToDevice);
+  // hipMemcpy( d_locations, &locations[0], sizeof(LatLong) * numRecords, hipMemcpyHostToDevice);
 
   /**
   * Execute kernel
   */
   euclid<<< gridDim, threadsPerBlock >>>(d_locations,d_distances,numRecords,lat,lng);
-  cudaDeviceSynchronize();
+  hipDeviceSynchronize();
 
   //Copy data from device memory to host memory
-  // cudaMemcpy( distances, d_distances, sizeof(float)*numRecords, cudaMemcpyDeviceToHost );
+  // hipMemcpy( distances, d_distances, sizeof(float)*numRecords, hipMemcpyDeviceToHost );
 
 	// find the resultsCount least distances
   findLowest(records,d_distances,numRecords,resultsCount);  
@@ -164,8 +164,8 @@ int main(int argc, char* argv[])
     // free(distances);
     
     //Free memory
-	cudaFree(d_locations);
-	cudaFree(d_distances);
+	hipFree(d_locations);
+	hipFree(d_distances);
 
 }
 

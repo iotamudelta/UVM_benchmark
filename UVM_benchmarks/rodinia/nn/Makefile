@@ -1,16 +1,15 @@
-include ../../../common/make.config
-
+HIP_DIR     := /opt/rocm
+HIPCC       := $(HIP_DIR)/bin/hipcc
 LOCAL_CC = gcc -g -O3 -Wall
-CC := $(CUDA_DIR)/bin/nvcc
 
 all : nn hurricane_gen
 
 clean :
 	rm -rf *.o nn hurricane_gen
 
-nn : nn_cuda.cu
-	$(CC) -cuda nn_cuda.cu
-	$(CC) -o nn nn_cuda.cu
+nn : nn_hip.hip
+	$(HIPCC) nn_hip.hip
+	$(HIPCC) -o nn nn_hip.hip
 
 hurricane_gen : hurricane_gen.c
 	$(LOCAL_CC) -o $@ $< -lm
