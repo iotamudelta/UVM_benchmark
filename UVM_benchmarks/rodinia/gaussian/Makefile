@@ -1,14 +1,15 @@
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-CC := $(CUDA_DIR)/bin/nvcc
+HIPCC       := $(HIP_DIR)/bin/hipcc
 
-INCLUDE := $(CUDA_DIR)/include
+INCLUDE     := $(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
 
-SRC = gaussian.cu
+SRC = gaussian.hip
 EXE = gaussian
 
 release: $(SRC)
-	$(CC) $(KERNEL_DIM) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 clean:
 	rm gaussian

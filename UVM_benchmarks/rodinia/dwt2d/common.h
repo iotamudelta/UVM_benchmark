@@ -33,29 +33,29 @@
 #define IMUL(a, b) __mul24(a, b)
 
 ////cuda timing macros
-//#define CTIMERINIT  cudaEvent_t cstart, cstop; \
-//                    cudaEventCreate(&cstart); \
-//                    cudaEventCreate(&cstop); \
+//#define CTIMERINIT  hipEvent_t cstart, cstop; \
+//                    hipEventCreate(&cstart); \
+//                    hipEventCreate(&cstop); \
 //                    float elapsedTime
-//#define CTIMERSTART(cstart) cudaEventRecord(cstart,0)
-//#define CTIMERSTOP(cstop) cudaEventRecord(cstop,0); \
-//                          cudaEventSynchronize(cstop); \
-//                          cudaEventElapsedTime(&elapsedTime, cstart, cstop)
+//#define CTIMERSTART(cstart) hipEventRecord(cstart,0)
+//#define CTIMERSTOP(cstop) hipEventRecord(cstop,0); \
+//                          hipEventSynchronize(cstop); \
+//                          hipEventElapsedTime(&elapsedTime, cstart, cstop)
 
 //divide and round up macro
 #define DIVANDRND(a, b) ((((a) % (b)) != 0) ? ((a) / (b) + 1) : ((a) / (b)))
 
-#  define cudaCheckError( msg ) {                                            \
-    cudaError_t err = cudaGetLastError();                                    \
-    if( cudaSuccess != err) {                                                \
+#  define hipCheckError( msg ) {                                            \
+    hipError_t err = hipGetLastError();                                    \
+    if( hipSuccess != err) {                                                \
         fprintf(stderr, "%s: %i: %s: %s.\n",                                 \
-                __FILE__, __LINE__, msg, cudaGetErrorString( err) );         \
+                __FILE__, __LINE__, msg, hipGetErrorString( err) );         \
         exit(-1);                                                            \
     } }
 
 #  define cudaCheckAsyncError( msg ) {                                       \
-    cudaDeviceSynchronize();                                                 \
-    cudaCheckError( msg );                                                   \
+    hipDeviceSynchronize();                                                 \
+    hipCheckError( msg );                                                   \
     }
 
 

@@ -1,4 +1,4 @@
 EXECUTABLE := correlation.exe
-CUFILES := correlation.cu
+HIPFILES := correlation.hip
 
 include ../common.mk

@@ -1,5 +1,5 @@
 EXECUTABLE := fdtd2d.exe
-CUFILES := fdtd2d.cu
+HIPFILES := fdtd2d.hip
 
 include ../common.mk
 

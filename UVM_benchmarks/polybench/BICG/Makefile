@@ -1,5 +1,5 @@
 EXECUTABLE := bicg.exe
-CUFILES := bicg.cu
+HIPFILES := bicg.hip
 
 include ../common.mk
 

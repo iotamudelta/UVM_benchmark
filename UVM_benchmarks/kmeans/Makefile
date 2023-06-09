@@ -1,14 +1,12 @@
-include ../../common/make.config
+HIPCC  := /opt/rocm/bin/hipcc
 
-CC := $(CUDA_DIR)/bin/nvcc
+all: kmeans_hip kmeans_standard 
 
-all: kmeans_cuda kmeans_standard 
-
-kmeans_cuda:
-	$(CC) -std=c++11 kmeans_cuda.cu -o kmeans_cuda
+kmeans_hip:
+	$(HIPCC) -std=c++11 kmeans_hip.hip -o kmeans_hip
 
 kmeans_standard:
-	$(CC) -std=c++11 standard_kmeans.cu -o kmeans_standard
+	$(HIPCC) -std=c++11 standard_kmeans.hip -o kmeans_standard
 
 clean:
-	rm -f kmeans_cuda kmeans_standard
+	rm -f kmeans_hip kmeans_standard

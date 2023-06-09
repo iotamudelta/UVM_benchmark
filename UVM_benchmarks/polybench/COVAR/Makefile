@@ -1,4 +1,4 @@
 EXECUTABLE := covariance.exe
-CUFILES := covariance.cu
+HIPFILES := covariance.hip
 
 include ../common.mk

@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include <vector>
 #include <memory>
-#include <cublas_v2.h>
-#include <cuda.h>
+#include <hipblas.h>
+#include <hip/hip_runtime.h>
 
 #ifndef LAYER_H
 #define LAYER_H
@@ -24,7 +24,7 @@ class Layer {
 	float *d_output;
 	float *d_preact;
 	float *d_weight;
-	cudaStream_t stream;
+	hipStream_t stream;
 
 	Layer(int M, int N, int O);
 

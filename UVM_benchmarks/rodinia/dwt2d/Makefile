@@ -1,6 +1,5 @@
 #Configure
-#CUDA_INSTALL_PATH ?= /usr/local/cuda
-CUDA_INSTALL_PATH = $(CUDA_DIR)
+HIP_DIR    := /opt/rocm
 EXECUTABLE := dwt2d
 
 # Debug options
@@ -8,26 +7,24 @@ dbg=0
 cudagdb=0 #compile for use with cuda-gdb, note that 'dbg' must be 1 as well
 performancetest=1
 
-# NVCC Options
-# NVCCFLAGS += -arch sm_20
+# HIPCC Options
+# HIPCCFLAGS += -arch sm_20
 
 # Files
-CFILES := 
+CFILES   := 
 CXXFILES := 
-CUFILES := main.cu dwt.cu components.cu dwt_cuda/fdwt53.cu dwt_cuda/fdwt97.cu dwt_cuda/common.cu dwt_cuda/rdwt97.cu dwt_cuda/rdwt53.cu
+HIPFILES := main.hip dwt.hip components.hip dwt_cuda/fdwt53.hip dwt_cuda/fdwt97.hip dwt_cuda/common.hip dwt_cuda/rdwt97.hip dwt_cuda/rdwt53.hip
 
 # Includes
-INCLUDES := -I. -I$(CUDA_INSTALL_PATH)/include
-
-include ../../../common/make.config
+INCLUDES := -I. -I$(HIP_DIR)/include
 
 
 # Common flags
 COMMONFLAGS += $(INCLUDES) 
-NVCCFLAGS += $(COMMONFLAGS)
-CXXFLAGS += $(COMMONFLAGS)
-CFLAGS += $(COMMONFLAGS) -std=c99 
-LDFLAGS += -L$(CUDA_INSTALL_PATH)/lib64 -lcudart
+HIPCCFLAGS  += $(COMMONFLAGS)
+CXXFLAGS    += $(COMMONFLAGS)
+CFLAGS      += $(COMMONFLAGS) -std=c99 
+LDFLAGS     += -L$(HIP_DIR)/lib64
 
 # Warning flags (from cuda common.mk)
 CXXWARN_FLAGS := \
@@ -58,16 +55,16 @@ CXXFLAGS += $(CXXWARN_FLAGS)
 # Debug/release flags
 ifeq ($(dbg),1)
     COMMONFLAGS += -g 
-    NVCCFLAGS   += -D_DEBUG
+    HIPCCFLAGS  += -D_DEBUG
     CXXFLAGS    += -D_DEBUG
     CFLAGS      += -D_DEBUG
 
     ifeq ($(cudagdb),1)
-        NVCCFLAGS += -G
+        HIPCCFLAGS += -G
     endif
 else 
     COMMONFLAGS += -O2 
-    NVCCFLAGS   += --compiler-options -fno-strict-aliasing
+    HIPCCFLAGS  += -fno-strict-aliasing
     CXXFLAGS    += -fno-strict-aliasing
     CFLAGS      += -fno-strict-aliasing
 endif
@@ -83,30 +80,30 @@ endif
 OUTPUT = -DOUTPUT
 
 # Compilers
-CXX := g++
-CC := gcc
-LINK := g++ -fPIC
-NVCC := $(CUDA_INSTALL_PATH)/bin/nvcc
+CXX   := g++
+CC    := gcc
+HIPCC := $(HIP_DIR)/bin/hipcc
+LINK  := $(HIPCC)
 
 # Generate object files list
 COBJS=$(CFILES:.c=.c.o)
 CXXOBJS=$(CXXFILES:.cpp=.cpp.o)
-CUOBJS=$(CUFILES:.cu=.cu.o)
+HIPOBJS=$(HIPFILES:.hip=.hip.o)
 
-.SUFFIXES: .c.o .cpp.o .cu.o .cu 
+.SUFFIXES: .c.o .cpp.o .hip.o .hip
 
 %.c.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.cu.o: %.cu
-	$(NVCC) $(OUTPUT) $(NVCCFLAGS) -c $< -o $@
+%.hip.o: %.hip
+	$(HIPCC) $(OUTPUT) $(HIPCCFLAGS) -c $< -o $@
 
 %.cpp.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(EXECUTABLE): $(COBJS) $(CXXOBJS) $(CUOBJS) 
-	$(LINK) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(CUOBJS) $(LDFLAGS)
+$(EXECUTABLE): $(COBJS) $(CXXOBJS) $(HIPOBJS) 
+	$(LINK) -o $(EXECUTABLE) $(COBJS) $(CXXOBJS) $(HIPOBJS) $(LDFLAGS)
 
 clean:
-	rm -f $(COBJS) $(CXXOBJS) $(CUOBJS) $(EXECUTABLE)
+	rm -f $(COBJS) $(CXXOBJS) $(HIPOBJS) $(EXECUTABLE)
 	rm *.bmp.dwt.*		

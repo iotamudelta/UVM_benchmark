@@ -1,4 +1,4 @@
 EXECUTABLE := gesummv.exe
-CUFILES := gesummv.cu
+HIPFILES := gesummv.hip
 # DEF := -DPREF
 include ../common.mk

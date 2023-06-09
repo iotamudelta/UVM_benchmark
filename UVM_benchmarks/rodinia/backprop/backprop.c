@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "backprop.h"
 #include <math.h>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 //#define OPEN
 
 #define ABS(x)          (((x) > 0.0) ? (x) : (-(x)))

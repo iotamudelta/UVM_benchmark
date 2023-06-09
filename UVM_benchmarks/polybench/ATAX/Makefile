@@ -1,4 +1,4 @@
 EXECUTABLE := atax.exe
-CUFILES := atax.cu
+HIPFILES := atax.hip
 
 include ../common.mk

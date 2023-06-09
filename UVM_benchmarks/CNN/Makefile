@@ -1,10 +1,7 @@
-include ../../common/make.config
-
-
-CC := $(CUDA_DIR)/bin/nvcc
+HIPCC  := /opt/rocm/bin/hipcc
 
 all:
-	$(CC) -lcuda -lcublas *.cu -o CNN
+	$(HIPCC) -lamdhip64 -lhipblas main.hip layer.hip -o CNN
 
 run:
 	./CNN

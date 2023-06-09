@@ -1,24 +1,25 @@
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-CC := $(CUDA_DIR)/bin/nvcc
+HIPCC       := $(HIP_DIR)/bin/hipcc
 
-INCLUDE := $(CUDA_DIR)/include
+INCLUDE     := $(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
 
-SRC = needle.cu
+SRC = needle.hip
 
 EXE = needle
 
 release: $(SRC)
-	$(CC) ${KERNEL_DIM} $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 enum: $(SRC)
-	$(CC) ${KERNEL_DIM} -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 debug: $(SRC)
-	$(CC) ${KERNEL_DIM} -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) -g $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 debugenum: $(SRC)
-	$(CC) ${KERNEL_DIM} -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(HIPCC) -g -deviceemu $(SRC) -o $(EXE) -I$(INCLUDE) -L$(HIP_LIB_DIR) 
 
 clean: $(SRC)
 	rm -f $(EXE) $(EXE).linkinfo result.txt
