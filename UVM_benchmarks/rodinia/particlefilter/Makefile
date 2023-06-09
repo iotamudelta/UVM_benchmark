@@ -1,18 +1,19 @@
 #makefile
 
-include ../../../common/make.config
+HIP_DIR     := /opt/rocm
 
-CC := $(CUDA_DIR)/bin/nvcc
+HIPCC       := $(HIP_DIR)/bin/hipcc
 
-INCLUDE := $(CUDA_DIR)/include
+INCLUDE     := $(HIP_DIR)/include
+HIP_LIB_DIR := $(HIP_DIR)/lib
 
 all: naive float
 
-naive: ex_particle_CUDA_naive_seq.cu
-	$(CC) -I$(INCLUDE) -L$(CUDA_LIB_DIR) -lcuda -g -lm -O3 -use_fast_math ex_particle_CUDA_naive_seq.cu -o particlefilter_naive
+naive: ex_particle_HIP_naive_seq.hip
+	$(HIPCC) -I$(INCLUDE) -L$(HIP_LIB_DIR) -g -lm -O3 -use_fast_math ex_particle_HIP_naive_seq.hip -o particlefilter_naive
 	
-float: ex_particle_CUDA_float_seq.cu
-	$(CC) -I$(INCLUDE) -L$(CUDA_LIB_DIR) -lcuda -g -lm -O3 -use_fast_math ex_particle_CUDA_float_seq.cu -o particlefilter_float
+float: ex_particle_HIP_float_seq.hip
+	$(HIPCC) -I$(INCLUDE) -L$(HIP_LIB_DIR) -g -lm -O3 -use_fast_math ex_particle_HIP_float_seq.hip -o particlefilter_float
 
 clean:
 	rm particlefilter_naive particlefilter_float

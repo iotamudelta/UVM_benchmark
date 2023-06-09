@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <float.h>
 #include <sys/time.h>
+#include "hip/hip_runtime.h"
 #define BLOCK_X 16
 #define BLOCK_Y 16
 #define PI 3.1415926535897932
@@ -46,9 +47,9 @@ double elapsed_time(long long start_time, long long end_time) {
  * Checks for CUDA errors and prints them to the screen to help with
  * debugging of CUDA related programming
  *****************************/
-void check_error(cudaError e) {
-    if (e != cudaSuccess) {
-        printf("\nCUDA error: %s\n", cudaGetErrorString(e));
+void check_error(hipError_t e) {
+    if (e != hipSuccess) {
+        printf("\nCUDA error: %s\n", hipGetErrorString(e));
         exit(1);
     }
 }
@@ -58,7 +59,7 @@ void cuda_print_double_array(double *array_GPU, size_t size) {
     double* mem = (double*) malloc(sizeof (double) *size);
 
     //transfer data from device
-    cudaMemcpy(mem, array_GPU, sizeof (double) *size, cudaMemcpyDeviceToHost);
+    hipMemcpy(mem, array_GPU, sizeof (double) *size, hipMemcpyDeviceToHost);
 
 
     printf("PRINTING ARRAY VALUES\n");
@@ -652,13 +653,13 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     }
     // int * objxy = (int *) malloc(countOnes * 2 * sizeof (int));
     int * objxy_GPU;
-    check_error( cudaMallocManaged(&objxy_GPU, sizeof(int)*2*countOnes) );
+    check_error( hipMallocManaged(&objxy_GPU, sizeof(int)*2*countOnes) );
 
     getneighbors(disk, countOnes, objxy_GPU, radius);
     //initial weights are all equal (1/Nparticles)
     // double * weights = (double *) malloc(sizeof (double) *Nparticles);
     double * weights_GPU;
-    check_error(cudaMallocManaged(&weights_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&weights_GPU, sizeof (double) *Nparticles));
     for (x = 0; x < Nparticles; x++) {
         weights_GPU[x] = 1 / ((double) (Nparticles));
     }
@@ -690,21 +691,21 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     double* partial_sums;
 
     //CUDA memory allocation
-    check_error(cudaMallocManaged(&arrayX_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&arrayY_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&xj_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&yj_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&CDF_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&u_GPU, sizeof (double) *Nparticles));
-    check_error(cudaMallocManaged(&likelihood_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&arrayX_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&arrayY_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&xj_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&yj_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&CDF_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&u_GPU, sizeof (double) *Nparticles));
+    check_error(hipMallocManaged(&likelihood_GPU, sizeof (double) *Nparticles));
     //set likelihood to zero
-    check_error(cudaMemset((void *) likelihood_GPU, 0, sizeof (double) *Nparticles));
-    // check_error(cudaMallocManaged(&weights_GPU, sizeof (double) *Nparticles));
-    // check_error(cudaMalloc((void **) &I_GPU, sizeof (unsigned char) *IszX * IszY * Nfr));
-    // check_error(cudaMallocManaged(&objxy_GPU, sizeof (int) *2 * countOnes));
-    check_error(cudaMallocManaged(&ind_GPU, sizeof (int) *countOnes * Nparticles));
-    // check_error(cudaMallocManaged(&seed_GPU, sizeof (int) *Nparticles));
-    check_error(cudaMallocManaged(&partial_sums, sizeof (double) *Nparticles));
+    check_error(hipMemset((void *) likelihood_GPU, 0, sizeof (double) *Nparticles));
+    // check_error(hipMallocManaged(&weights_GPU, sizeof (double) *Nparticles));
+    // check_error(hipMalloc((void **) &I_GPU, sizeof (unsigned char) *IszX * IszY * Nfr));
+    // check_error(hipMallocManaged(&objxy_GPU, sizeof (int) *2 * countOnes));
+    check_error(hipMallocManaged(&ind_GPU, sizeof (int) *countOnes * Nparticles));
+    // check_error(hipMallocManaged(&seed_GPU, sizeof (int) *Nparticles));
+    check_error(hipMallocManaged(&partial_sums, sizeof (double) *Nparticles));
 
 
     //Donnie - this loop is different because in this kernel, arrayX and arrayY
@@ -721,12 +722,12 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     // int indX, indY;
     //start send
     long long send_start = get_time();
-    // check_error(cudaMemcpy(I_GPU, I, sizeof (unsigned char) *IszX * IszY*Nfr, cudaMemcpyHostToDevice));
-    // check_error(cudaMemcpy(objxy_GPU, objxy, sizeof (int) *2 * countOnes, cudaMemcpyHostToDevice));
-    // check_error(cudaMemcpy(weights_GPU, weights, sizeof (double) *Nparticles, cudaMemcpyHostToDevice));
-    // check_error(cudaMemcpy(xj_GPU, xj, sizeof (double) *Nparticles, cudaMemcpyHostToDevice));
-    // check_error(cudaMemcpy(yj_GPU, yj, sizeof (double) *Nparticles, cudaMemcpyHostToDevice));
-    // check_error(cudaMemcpy(seed_GPU, seed, sizeof (int) *Nparticles, cudaMemcpyHostToDevice));
+    // check_error(hipMemcpy(I_GPU, I, sizeof (unsigned char) *IszX * IszY*Nfr, hipMemcpyHostToDevice));
+    // check_error(hipMemcpy(objxy_GPU, objxy, sizeof (int) *2 * countOnes, hipMemcpyHostToDevice));
+    // check_error(hipMemcpy(weights_GPU, weights, sizeof (double) *Nparticles, hipMemcpyHostToDevice));
+    // check_error(hipMemcpy(xj_GPU, xj, sizeof (double) *Nparticles, hipMemcpyHostToDevice));
+    // check_error(hipMemcpy(yj_GPU, yj, sizeof (double) *Nparticles, hipMemcpyHostToDevice));
+    // check_error(hipMemcpy(seed_GPU, seed, sizeof (int) *Nparticles, hipMemcpyHostToDevice));
     long long send_end = get_time();
     printf("TIME TO SEND TO GPU: %f\n", elapsed_time(send_start, send_end));
     int num_blocks = ceil((double) Nparticles / (double) threads_per_block);
@@ -734,37 +735,37 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
 
     for (int k = 1; k < Nfr; k++) {
         
-        likelihood_kernel << < num_blocks, threads_per_block >> > (arrayX_GPU, arrayY_GPU, xj_GPU, yj_GPU, CDF_GPU, ind_GPU, objxy_GPU, likelihood_GPU, I, u_GPU, weights_GPU, Nparticles, countOnes, max_size, k, IszY, Nfr, seed, partial_sums);
+        likelihood_kernel <<< num_blocks, threads_per_block >>> (arrayX_GPU, arrayY_GPU, xj_GPU, yj_GPU, CDF_GPU, ind_GPU, objxy_GPU, likelihood_GPU, I, u_GPU, weights_GPU, Nparticles, countOnes, max_size, k, IszY, Nfr, seed, partial_sums);
 
-        sum_kernel << < num_blocks, threads_per_block >> > (partial_sums, Nparticles);
+        sum_kernel <<< num_blocks, threads_per_block >>> (partial_sums, Nparticles);
 
-        normalize_weights_kernel << < num_blocks, threads_per_block >> > (weights_GPU, Nparticles, partial_sums, CDF_GPU, u_GPU, seed);
+        normalize_weights_kernel <<< num_blocks, threads_per_block >>> (weights_GPU, Nparticles, partial_sums, CDF_GPU, u_GPU, seed);
         
-        find_index_kernel << < num_blocks, threads_per_block >> > (arrayX_GPU, arrayY_GPU, CDF_GPU, u_GPU, xj_GPU, yj_GPU, weights_GPU, Nparticles);
+        find_index_kernel <<< num_blocks, threads_per_block >>> (arrayX_GPU, arrayY_GPU, CDF_GPU, u_GPU, xj_GPU, yj_GPU, weights_GPU, Nparticles);
 
     }//end loop
 
     //block till kernels are finished
-    cudaDeviceSynchronize();
+    hipDeviceSynchronize();
     long long back_time = get_time();
 
-    check_error( cudaFree(xj_GPU) );
-    check_error( cudaFree(yj_GPU) );
-    check_error( cudaFree(CDF_GPU) );
-    check_error( cudaFree(u_GPU) );
-    check_error( cudaFree(likelihood_GPU) );
-    // cudaFree(I_GPU);
-    check_error( cudaFree(objxy_GPU) );
-    check_error( cudaFree(ind_GPU) );
-    // cudaFree(seed_GPU);
-    check_error( cudaFree(partial_sums) );
+    check_error( hipFree(xj_GPU) );
+    check_error( hipFree(yj_GPU) );
+    check_error( hipFree(CDF_GPU) );
+    check_error( hipFree(u_GPU) );
+    check_error( hipFree(likelihood_GPU) );
+    // hipFree(I_GPU);
+    check_error( hipFree(objxy_GPU) );
+    check_error( hipFree(ind_GPU) );
+    // hipFree(seed_GPU);
+    check_error( hipFree(partial_sums) );
 
     long long free_time = get_time();
-    // check_error(cudaMemcpy(arrayX, arrayX_GPU, sizeof (double) *Nparticles, cudaMemcpyDeviceToHost));
+    // check_error(hipMemcpy(arrayX, arrayX_GPU, sizeof (double) *Nparticles, hipMemcpyDeviceToHost));
     long long arrayX_time = get_time();
-    // check_error(cudaMemcpy(arrayY, arrayY_GPU, sizeof (double) *Nparticles, cudaMemcpyDeviceToHost));
+    // check_error(hipMemcpy(arrayY, arrayY_GPU, sizeof (double) *Nparticles, hipMemcpyDeviceToHost));
     long long arrayY_time = get_time();
-    // check_error(cudaMemcpy(weights, weights_GPU, sizeof (double) *Nparticles, cudaMemcpyDeviceToHost));
+    // check_error(hipMemcpy(weights, weights_GPU, sizeof (double) *Nparticles, hipMemcpyDeviceToHost));
     long long back_end_time = get_time();
     printf("GPU Execution: %lf\n", elapsed_time(send_end, back_time));
     printf("FREE TIME: %lf\n", elapsed_time(back_time, free_time));
@@ -786,9 +787,9 @@ void particleFilter(unsigned char * I, int IszX, int IszY, int Nfr, int * seed, 
     printf("%lf\n", distance);
 
     //CUDA freeing of memory
-    check_error( cudaFree(weights_GPU) );
-    check_error( cudaFree(arrayY_GPU) );
-    check_error( cudaFree(arrayX_GPU) );
+    check_error( hipFree(weights_GPU) );
+    check_error( hipFree(arrayY_GPU) );
+    check_error( hipFree(arrayX_GPU) );
 
     //free regular memory
     // free(likelihood);
@@ -863,14 +864,14 @@ int main(int argc, char * argv[]) {
     //establish seed
     // int * seed = (int *) malloc(sizeof (int) *Nparticles);
     int *seed;
-    check_error( cudaMallocManaged(&seed, sizeof(int)*Nparticles) );
+    check_error( hipMallocManaged(&seed, sizeof(int)*Nparticles) );
     int i;
     for (i = 0; i < Nparticles; i++)
         seed[i] = time(0) * i;
     //malloc matrix
     // unsigned char * I = (unsigned char *) malloc(sizeof (unsigned char) *IszX * IszY * Nfr);
     unsigned char * I;
-    check_error( cudaMallocManaged(&I, sizeof(unsigned char)*IszX*IszY*Nfr) );
+    check_error( hipMallocManaged(&I, sizeof(unsigned char)*IszX*IszY*Nfr) );
     long long start = get_time();
     //call video sequence
     videoSequence(I, IszX, IszY, Nfr, seed);
@@ -882,8 +883,8 @@ int main(int argc, char * argv[]) {
     printf("PARTICLE FILTER TOOK %f\n", elapsed_time(endVideoSequence, endParticleFilter));
     printf("ENTIRE PROGRAM TOOK %f\n", elapsed_time(start, endParticleFilter));
 
-    check_error( cudaFree(seed) );
+    check_error( hipFree(seed) );
     // free(I);
-    check_error( cudaFree(I) );
+    check_error( hipFree(I) );
     return 0;
 }
