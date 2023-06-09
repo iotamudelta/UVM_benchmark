@@ -4,11 +4,11 @@
 #include <string.h>
 #include <math.h>
 #include "needle.h"
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 #include <sys/time.h>
 
 // includes, kernels
-#include "needle_kernel.cu"
+#include "needle_kernel.hip"
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
@@ -103,8 +103,8 @@ void runTest( int argc, char** argv)
     size = max_cols * max_rows;
 	// output_itemsets = (int *)malloc( size * sizeof(int) );
 	
-	cudaMallocManaged(&referrence_cuda, sizeof(int)*size);
-	cudaMallocManaged(&input_itemsets, sizeof(int)*size);
+	hipMallocManaged(&referrence_cuda, sizeof(int)*size);
+	hipMallocManaged(&input_itemsets, sizeof(int)*size);
 
 	if (!input_itemsets)
 		fprintf(stderr, "error: can not allocate memory");
@@ -141,11 +141,11 @@ void runTest( int argc, char** argv)
        input_itemsets[j] = -j * penalty;
 
 
-	// cudaMalloc((void**)& referrence_cuda, sizeof(int)*size);
-	// cudaMalloc((void**)& matrix_cuda, sizeof(int)*size);
+	// hipMalloc((void**)& referrence_cuda, sizeof(int)*size);
+	// hipMalloc((void**)& matrix_cuda, sizeof(int)*size);
 	
-	// cudaMemcpy(referrence_cuda, referrence, sizeof(int) * size, cudaMemcpyHostToDevice);
-	// cudaMemcpy(matrix_cuda, input_itemsets, sizeof(int) * size, cudaMemcpyHostToDevice);
+	// hipMemcpy(referrence_cuda, referrence, sizeof(int) * size, hipMemcpyHostToDevice);
+	// hipMemcpy(matrix_cuda, input_itemsets, sizeof(int) * size, hipMemcpyHostToDevice);
 
     dim3 dimGrid;
 	dim3 dimBlock(BLOCK_SIZE, 1);
@@ -169,7 +169,7 @@ void runTest( int argc, char** argv)
 	}
 
 
-    // cudaMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, cudaMemcpyDeviceToHost);
+    // hipMemcpy(output_itemsets, matrix_cuda, sizeof(int) * size, hipMemcpyDeviceToHost);
 	
 //#define TRACEBACK
 #ifdef TRACEBACK
@@ -232,8 +232,8 @@ void runTest( int argc, char** argv)
 
 #endif
 
-	cudaFree(referrence_cuda);
-	cudaFree(input_itemsets);
+	hipFree(referrence_cuda);
+	hipFree(input_itemsets);
 
 	// free(referrence);
 	// free(input_itemsets);
